@@ -1,0 +1,218 @@
+import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import "../css/Studio.css";
+
+export default function Studio() {
+  const location = useLocation();
+
+  const audioContextRef = useRef(null);
+  const audioBuffersRef = useRef();
+  const nodesRef = useRef([]);
+
+  const [stemsData, setStemsData] = useState(
+    location.state || JSON.parse(sessionStorage.getItem("studioData")),
+  );
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const [trackProgress, setTrackProgress] = useState(0);
+  const trackProgressIntervalRef = useRef(null);
+  const playbackStartRef = useRef(0);
+
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const [stemGains, setStemGains] = useState(
+    stemsData ? Array(stemsData.json.length).fill(1) : [],
+  );
+
+  const hasStartedRef = useRef(false);
+  const seekOffsetRef = useRef(0);
+
+  useEffect(() => {
+    if (stemsData !== null) {
+      getStemFile();
+    }
+    return () => stopAudio();
+  }, []);
+
+  async function getStemFile() {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext();
+      }
+      const buffers = await Promise.all(
+        stemsData.json.map(async (fileName) => {
+          const response = await fetch(
+            `api/jobs/${stemsData.jobId}/stem/${fileName}`,
+          );
+          const arrayBuffer = await response.arrayBuffer();
+          return audioContextRef.current.decodeAudioData(arrayBuffer);
+        }),
+      );
+      audioBuffersRef.current = buffers;
+
+      setStemGains(Array(buffers.length).fill(1));
+      setIsLoaded(true);
+      createNodes();
+      console.log("getStemFiles success");
+    } catch (error) {
+      alert(error);
+    }
+  }
+
+  function createNodes() {
+    const nodes = audioBuffersRef.current.map((buffer) => {
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = buffer;
+      const gainNode = audioContextRef.current.createGain();
+      source.connect(gainNode);
+      gainNode.connect(audioContextRef.current.destination);
+      return { source, gainNode };
+    });
+    nodesRef.current = nodes;
+  }
+  function handlePlay() {
+    if (!isLoaded) {
+      alert("Loading media. Please wait.");
+      return;
+    }
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+
+    if (!isPlaying) {
+      if (
+        hasStartedRef.current &&
+        audioContextRef.current.state === "suspended"
+      ) {
+        // Genuine resume from pause — sources are still live inside the suspended context
+        audioContextRef.current.resume();
+      } else {
+        // Fresh start (first play, or play after a seek-while-paused)
+        createNodes();
+        stemGains.forEach((gain, i) => {
+          nodesRef.current[i].gainNode.gain.value = gain;
+        });
+        const offset = seekOffsetRef.current;
+        const startTime = audioContextRef.current.currentTime;
+        playbackStartRef.current = startTime - offset;
+        nodesRef.current.forEach(({ source }) =>
+          source.start(startTime, offset),
+        );
+        audioContextRef.current.resume(); // no-op if already running
+        hasStartedRef.current = true;
+        seekOffsetRef.current = 0;
+      }
+      trackProgressIntervalRef.current = setInterval(() => {
+        setTrackProgress(
+          ((audioContextRef.current.currentTime - playbackStartRef.current) /
+            audioBuffersRef.current[0].duration) *
+            100,
+        );
+      }, 1000);
+      setIsPlaying(true);
+    } else {
+      clearInterval(trackProgressIntervalRef.current);
+      audioContextRef.current.suspend();
+      setIsPlaying(false);
+    }
+  }
+
+  function handleSeek(e) {
+    const pct = parseFloat(e.target.value);
+    const duration = audioBuffersRef.current[0].duration;
+    const offset = (pct / 100) * duration;
+
+    setTrackProgress(pct);
+
+    if (isPlaying) {
+      clearInterval(trackProgressIntervalRef.current);
+      nodesRef.current.forEach(({ source }) => source.stop());
+      createNodes();
+      stemGains.forEach((gain, i) => {
+        nodesRef.current[i].gainNode.gain.value = gain;
+      });
+      const startTime = audioContextRef.current.currentTime;
+      nodesRef.current.forEach(({ source }) => source.start(startTime, offset));
+      playbackStartRef.current = audioContextRef.current.currentTime - offset;
+      trackProgressIntervalRef.current = setInterval(() => {
+        setTrackProgress(
+          ((audioContextRef.current.currentTime - playbackStartRef.current) /
+            duration) *
+            100,
+        );
+      }, 1000);
+    } else {
+      playbackStartRef.current = audioContextRef.current.currentTime - offset;
+    }
+  }
+
+  function handleStemGain(e, i) {
+    setStemGains((prev) => {
+      const next = [...prev];
+      next[i] = parseFloat(e.target.value);
+      return next;
+    });
+
+    nodesRef.current[i].gainNode.gain.value = parseFloat(e.target.value);
+  }
+
+  function stopAudio() {
+    clearInterval(trackProgressIntervalRef.current);
+    if (audioContextRef.current) audioContextRef.current.close();
+    setIsPlaying(false);
+  }
+
+  return (
+    <div className="studio-page">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <h1>Studio</h1>
+        <button onClick={handlePlay}>
+          {!isLoaded ? "Loading" : !isPlaying ? "Play" : "Pause"}
+        </button>
+      </div>
+
+      <div className="stems-panel">
+        {stemsData?.json.map((stem, i) => (
+          <div className="stem-row" key={i}>
+            <span className="stem-name">
+              {stem
+                .replace(".wav", "")
+                .replace(".mp3", "")
+                .replace(".flac", "")}
+            </span>
+            <input
+              className="stem-progress"
+              type="range"
+              min={0}
+              max={100}
+              value={trackProgress}
+              onChange={handleSeek}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="fader-panel">
+        {stemsData?.json.map((stem, i) => (
+          <div className="fader-channel" key={i}>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={stemGains[i]}
+              onChange={(e) => handleStemGain(e, i)}
+            />
+            <span className="fader-label">{stem.split(".")[0]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

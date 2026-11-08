@@ -1,0 +1,23 @@
+# Build context is the repo root (see docker-compose.yml), so paths are relative to it.
+.git
+.github
+data/
+docker-compose.yml
+**/.env
+**/.env.*
+
+# Backend
+backend/.venv
+backend/jobs
+backend/logs
+backend/output
+backend/static
+**/__pycache__
+**/*.pyc
+
+# Frontend (npm ci / npm run build happen inside the image)
+frontend/node_modules
+frontend/dist
+
+**/*.log
+**/.DS_Store

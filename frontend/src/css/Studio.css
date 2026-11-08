@@ -1,0 +1,58 @@
+.studio-page {
+    height: calc(100% - var(--navbar-height));
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+}
+
+.stems-panel {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid rgb(77, 77, 77);
+    padding: 10px;
+}
+
+.stem-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgb(40, 40, 40);
+}
+
+.stem-name {
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.stem-progress {
+    flex: 1;
+}
+
+.fader-panel {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 160px;
+    border: 1px solid rgb(77, 77, 77);
+    padding: 10px;
+}
+
+.fader-channel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.fader-channel input[type="range"] {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    height: 100px;
+}
+
+.fader-label {
+    font-size: 0.75rem;
+    color: rgb(160, 160, 160);
+}

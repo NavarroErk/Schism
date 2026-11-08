@@ -1,0 +1,31 @@
+# Runtime data (mounted via docker-compose volumes)
+data/
+
+# Backend (Python)
+backend/.venv/
+backend/jobs/
+backend/logs/
+backend/output/
+backend/static/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Frontend (Node)
+node_modules/
+frontend/dist/
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

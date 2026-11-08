@@ -1,0 +1,20 @@
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  color-scheme: dark;
+}
+
+:root {
+  --navbar-height: 60px
+}
+
+nav {
+  background-color: #1b1b1b;
+  height: var(--navbar-height);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-left: 16px;
+}
+

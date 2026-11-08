@@ -1,0 +1,13 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8212:8212"
+    volumes:
+      - ./data/jobs:/app/jobs
+      - ./data/logs:/app/logs
+    environment:
+      - TZ=UTC
+    restart: unless-stopped

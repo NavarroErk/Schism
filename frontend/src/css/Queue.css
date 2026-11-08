@@ -1,0 +1,43 @@
+.queue-page{
+    height: calc(100% - var(--navbar-height));
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+
+}
+
+.job-queue {
+    /* height: calc(100% - var(--navbar-height)); */
+    overflow-y: scroll;
+    border: 1px solid white;
+}
+
+
+/* QueueItem.jsx styling */
+.queue-item {
+    background-color: rgb(23, 23, 23);
+    border: 1px solid rgb(77, 77, 77);
+    padding: 10px;
+}
+
+.queue-item:hover {
+    cursor: pointer;
+}
+
+
+.queue-item-filename-date-row{
+    display: flex;
+    justify-content: space-between;
+}
+
+.queue-item-format-model-row {
+    display: flex;
+    gap: 12px;
+}
+
+.queue-item-failed{
+    background-color: rgba(196, 0, 0, 0.182)
+}
+.queue-item-active{
+    background-color: rgba(62, 113, 255, 0.182)
+}
