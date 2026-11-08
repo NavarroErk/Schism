@@ -27,4 +27,4 @@ jobs:
           context: .
           file: backend/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}:latest
+          tags: ghcr.io/navarroerk/schism:latest
