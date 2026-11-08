@@ -142,6 +142,13 @@ export default function Studio() {
         );
       }, 1000);
     } else {
+      nodesRef.current.forEach(({ source }) => {
+        try {
+          source.stop();
+        } catch (e) {}
+      });
+      seekOffsetRef.current = offset;
+      hasStartedRef.current = false;
       playbackStartRef.current = audioContextRef.current.currentTime - offset;
     }
   }
