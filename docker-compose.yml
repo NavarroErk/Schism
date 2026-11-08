@@ -1,8 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: ghcr.io/navarroerk/schism:latest
     ports:
       - "8212:8212"
     volumes:
