@@ -164,17 +164,17 @@ export default function Studio() {
 
   return (
     <div className="studio-page">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <h1>Studio</h1>
-        <button onClick={handlePlay}>
-          {!isLoaded ? "Loading" : !isPlaying ? "Play" : "Pause"}
-        </button>
+      <div className="studio-header">
+        <strong>
+          {stemsData?.fileName
+            ? stemsData.fileName.split(".")[0]
+            : "No Filename Found"}
+        </strong>
+
+        <div className="studio-header-btns">
+          <button>♩</button>
+          <button>⤓</button>
+        </div>
       </div>
 
       <div className="stems-panel">
@@ -198,20 +198,29 @@ export default function Studio() {
         ))}
       </div>
 
-      <div className="fader-panel">
-        {stemsData?.json.map((stem, i) => (
-          <div className="fader-channel" key={i}>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={stemGains[i]}
-              onChange={(e) => handleStemGain(e, i)}
-            />
-            <span className="fader-label">{stem.split(".")[0]}</span>
-          </div>
-        ))}
+      <div className="controls-section">
+        <div className="fader-panel">
+          {stemsData?.json.map((stem, i) => (
+            <div className="fader-channel" key={i}>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={stemGains[i]}
+                onChange={(e) => handleStemGain(e, i)}
+              />
+              <span className="fader-label">{stem.split(".")[0]}</span>
+            </div>
+          ))}
+        </div>
+        <div className="transport-bar">
+          <button>⏮</button>
+          <button onClick={handlePlay}>
+            {!isLoaded ? "..." : !isPlaying ? "▶" : "⏸"}
+          </button>
+          <button>⏭</button>
+        </div>
       </div>
     </div>
   );

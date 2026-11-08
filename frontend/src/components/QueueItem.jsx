@@ -58,8 +58,13 @@ function QueueItem({ job, fetchJobsData, key }) {
       const response = await fetch(`api/jobs/${jobId}/stem-file-names`);
       const json = await response.json();
       if (response.ok) {
-        sessionStorage.setItem("studioData", JSON.stringify({ json, jobId }));
-        navigate("/studio", { state: { json, jobId } });
+        sessionStorage.setItem(
+          "studioData",
+          JSON.stringify({ json, jobId, fileName: job.file_name }),
+        );
+        navigate("/studio", {
+          state: { json, jobId, fileName: job.file_name },
+        });
         // console.log(json);
       } else {
         console.log(json.detail);
