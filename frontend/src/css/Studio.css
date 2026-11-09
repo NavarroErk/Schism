@@ -127,7 +127,7 @@
     height: calc(100% - 24px);
     -webkit-appearance: none;
     appearance: none;
-    /* background: transparent; */
+    touch-action: none;
 }
 
 .fader-channel input[type="range"]::-webkit-slider-runnable-track {

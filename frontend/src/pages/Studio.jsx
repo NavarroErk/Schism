@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../css/Studio.css";
 
 export default function Studio() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const audioContextRef = useRef(null);
   const audioBuffersRef = useRef();
@@ -55,7 +56,7 @@ export default function Studio() {
       createNodes();
       console.log("getStemFiles success");
     } catch (error) {
-      alert(error);
+      if (error.name === "AbortError") return;
     }
   }
 
@@ -169,6 +170,11 @@ export default function Studio() {
     setIsPlaying(false);
   }
 
+  function handleOpenInPractice() {
+    const practiceData = { ...stemsData, stemGains };
+    sessionStorage.setItem("practiceData", JSON.stringify(practiceData));
+    navigate("/practice", { state: practiceData });
+  }
   return (
     <div className="studio-page">
       <div className="studio-header">
@@ -179,7 +185,7 @@ export default function Studio() {
         </strong>
 
         <div className="studio-header-btns">
-          <button>♩</button>
+          <button onClick={handleOpenInPractice}>♩</button>
           <button>⤓</button>
         </div>
       </div>

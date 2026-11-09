@@ -1,0 +1,124 @@
+.practice-page {
+  height: calc(100% - var(--navbar-height));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  gap: 12px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.circle-section {
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.circle-time {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.current-time {
+  font-size: 1.4rem;
+}
+
+.total-time {
+  font-size: 1rem;
+  color: rgb(160, 160, 160);
+}
+
+.practice-tabs-section {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  min-height: 220px;
+}
+
+.practice-tabs-mobile {
+  display: none;
+}
+
+.practice-panels-desktop {
+  display: flex;
+  height: 100%;
+  border: 1px solid rgb(77, 77, 77);
+}
+
+.practice-panels-desktop .practice-fader-panel {
+  width: 65%;
+  border-right: 1px solid rgb(77, 77, 77);
+  height: 100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.practice-panels-desktop .markers-panel {
+  width: 35%;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fader-channel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fader-channel input[type="range"] {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  touch-action: none;
+}
+
+.fader-label {
+  font-size: 0.75rem;
+  color: rgb(160, 160, 160);
+}
+
+.marker-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.practice-transport {
+  display: flex;
+  gap: 20px;
+  flex-shrink: 0;
+  padding-bottom: 16px;
+}
+
+.practice-transport > button {
+  width: 70px;
+  height: 70px;
+  font-size: 1.5rem;
+}
+
+@media (max-width: 600px), (orientation: portrait) {
+  .practice-tabs-mobile {
+    display: block;
+    min-height: 260px;
+  }
+
+  .practice-panels-desktop {
+    display: none;
+  }
+
+  .practice-fader-panel {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 150px;
+  }
+}
