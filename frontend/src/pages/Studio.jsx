@@ -71,6 +71,27 @@ export default function Studio() {
     });
     nodesRef.current = nodes;
   }
+  function startProgressInterval() {
+    trackProgressIntervalRef.current = setInterval(() => {
+      const duration = audioBuffersRef.current[0].duration;
+      const position =
+        audioContextRef.current.currentTime - playbackStartRef.current;
+      if (position >= duration) {
+        handleEnded();
+        return;
+      }
+      setTrackProgress((position / duration) * 100);
+    }, 250);
+  }
+
+  function handleEnded() {
+    clearInterval(trackProgressIntervalRef.current);
+    setTrackProgress(100);
+    setIsPlaying(false);
+    hasStartedRef.current = false;
+    seekOffsetRef.current = 0;
+  }
+
   function handlePlay() {
     if (!isLoaded) {
       alert("Loading media. Please wait.");
@@ -85,10 +106,10 @@ export default function Studio() {
         hasStartedRef.current &&
         audioContextRef.current.state === "suspended"
       ) {
-        // Genuine resume from pause — sources are still live inside the suspended context
+        // resume from pause; sources still live inside the suspended context
         audioContextRef.current.resume();
       } else {
-        // Fresh start (first play, or play after a seek-while-paused)
+        // Fresh start (first play, or play after a seek while paused)
         createNodes();
         stemGains.forEach((gain, i) => {
           nodesRef.current[i].gainNode.gain.value = gain;
@@ -99,17 +120,11 @@ export default function Studio() {
         nodesRef.current.forEach(({ source }) =>
           source.start(startTime, offset),
         );
-        audioContextRef.current.resume(); // no-op if already running
+        audioContextRef.current.resume();
         hasStartedRef.current = true;
         seekOffsetRef.current = 0;
       }
-      trackProgressIntervalRef.current = setInterval(() => {
-        setTrackProgress(
-          ((audioContextRef.current.currentTime - playbackStartRef.current) /
-            audioBuffersRef.current[0].duration) *
-            100,
-        );
-      }, 1000);
+      startProgressInterval();
       setIsPlaying(true);
     } else {
       clearInterval(trackProgressIntervalRef.current);
@@ -135,13 +150,7 @@ export default function Studio() {
       const startTime = audioContextRef.current.currentTime;
       nodesRef.current.forEach(({ source }) => source.start(startTime, offset));
       playbackStartRef.current = audioContextRef.current.currentTime - offset;
-      trackProgressIntervalRef.current = setInterval(() => {
-        setTrackProgress(
-          ((audioContextRef.current.currentTime - playbackStartRef.current) /
-            duration) *
-            100,
-        );
-      }, 1000);
+      startProgressInterval();
     } else {
       nodesRef.current.forEach(({ source }) => {
         try {

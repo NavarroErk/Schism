@@ -9,75 +9,170 @@
   box-sizing: border-box;
 }
 
-.circle-section {
-  position: relative;
-  cursor: pointer;
-  flex-shrink: 0;
-}
+/* seek display (circle or line) */
 
-.circle-time {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  pointer-events: none;
-}
-
-.current-time {
-  font-size: 1.4rem;
-}
-
-.total-time {
-  font-size: 1rem;
-  color: rgb(160, 160, 160);
-}
-
-.practice-tabs-section {
+.seek-section {
   flex: 1;
   min-height: 0;
   width: 100%;
-  min-height: 220px;
-}
-
-.practice-tabs-mobile {
-  display: none;
-}
-
-.practice-panels-desktop {
   display: flex;
-  height: 100%;
-  border: 1px solid rgb(77, 77, 77);
+  align-items: center;
+  justify-content: center;
 }
 
-.practice-panels-desktop .practice-fader-panel {
-  width: 65%;
-  border-right: 1px solid rgb(77, 77, 77);
+.seek-display {
+  position: relative;
+}
+
+.seek-display.circle {
   height: 100%;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.seek-display.circle svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  cursor: pointer;
+  touch-action: none; /* drag without scrolling page */
+}
+
+.seek-display.line {
+  width: 100%;
+  max-width: 900px;
+}
+
+.seek-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  z-index: 1;
+}
+
+svg .current-time {
+  font-size: 34px;
+  fill: white;
+}
+
+svg .total-time {
+  font-size: 18px;
+  fill: rgb(160, 160, 160);
+}
+
+.loop-arc {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.15);
+}
+
+/* line view */
+.line-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 12px;
+}
+
+.line-time {
+  text-align: center;
+}
+
+.line-time .current-time {
+  font-size: 2rem;
+}
+
+.line-time .total-time {
+  font-size: 1.2rem;
+  color: rgb(160, 160, 160);
+}
+
+.line-seek {
+  position: relative;
+  padding-top: 30px; 
+  padding-bottom: 8px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.line-area {
+  position: relative;
+  height: 26px;
+  display: flex;
+  align-items: center;
+}
+
+.line-loop {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.line-track {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  background: rgb(60, 60, 60);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.line-fill {
+  height: 100%;
+  background: white;
+}
+
+.line-marker {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.8rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* A/B colors */
+.marker-a {
+  fill: rgb(90, 200, 120);
+  color: rgb(90, 200, 120);
+}
+
+.marker-b {
+  fill: rgb(235, 100, 100);
+  color: rgb(235, 100, 100);
+}
+
+/* mixer  */
+
+.practice-fader-panel {
   display: flex;
   justify-content: space-around;
   align-items: center;
-}
-
-.practice-panels-desktop .markers-panel {
-  width: 35%;
+  height: 100%;
   padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  box-sizing: border-box;
 }
 
-.fader-channel {
+.practice-fader-panel .fader-channel {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  height: 100%;
 }
 
-.fader-channel input[type="range"] {
+.practice-fader-panel .fader-channel input[type="range"] {
   writing-mode: vertical-lr;
   direction: rtl;
+  height: calc(100% - 24px);
   touch-action: none;
 }
 
@@ -92,17 +187,40 @@
   background-color: green;
 }
 
+/* markers / speed / transport */
+
 .marker-buttons {
   display: flex;
-  flex-direction: column;
   gap: 8px;
+  width: 100%;
+}
+
+.marker-buttons > button {
+  flex: 1;
+  height: 40px;
+  font-weight: bold;
+}
+
+.marker-buttons > button:disabled {
+  opacity: 0.35;
+}
+
+.speed-control {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.speed-control input {
+  width: 100%;
 }
 
 .practice-transport {
   display: flex;
+  justify-content: center;
   gap: 20px;
-  flex-shrink: 0;
-  padding-bottom: 16px;
 }
 
 .practice-transport > button {
@@ -111,20 +229,76 @@
   font-size: 1.5rem;
 }
 
-@media (max-width: 600px), (orientation: portrait) {
-  .practice-tabs-mobile {
-    display: block;
-    min-height: 260px;
-  }
+/* desktop layout */
 
-  .practice-panels-desktop {
+.practice-mobile {
+  display: none;
+}
+
+.practice-desktop {
+  display: flex;
+  width: 100%;
+  height: 260px;
+  flex-shrink: 0;
+  border: 1px solid rgb(77, 77, 77);
+  box-sizing: border-box;
+}
+
+.practice-desktop .practice-fader-panel {
+  width: 65%;
+  border-right: 1px solid rgb(77, 77, 77);
+}
+
+.practice-desktop .markers-panel {
+  width: 35%;
+  padding: 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* mobile layout */
+
+@media (max-width: 600px), (orientation: portrait) {
+  .practice-desktop {
     display: none;
   }
 
-  .practice-fader-panel {
+  .practice-mobile {
     display: flex;
-    justify-content: space-around;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .practice-mobile .speed-control input {
+    width: 80%;
+  }
+
+  .mobile-bottom {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tab-body {
+    height: 170px;
+    display: flex;
     align-items: center;
-    height: 150px;
+    justify-content: center;
+  }
+
+  .tab-body > .practice-fader-panel {
+    width: 100%;
+  }
+
+  .tab-body > .marker-buttons {
+    padding: 0 12px;
+  }
+
+  .practice-transport {
+    padding-bottom: 16px;
   }
 }
