@@ -27,6 +27,14 @@ export default function Studio() {
   );
   const [masterGain, setMasterGain] = useState(1);
 
+  // export popup
+  const [showExport, setShowExport] = useState(false);
+  const [selectedStems, setSelectedStems] = useState(
+    stemsData ? Array(stemsData.json.length).fill(false) : [],
+  );
+  const allSelected =
+    selectedStems.length > 0 && selectedStems.every((selected) => selected);
+
   const hasStartedRef = useRef(false);
   const seekOffsetRef = useRef(0);
 
@@ -201,6 +209,16 @@ export default function Studio() {
     setIsPlaying(false);
   }
 
+  function handleSelectAll() {
+    setSelectedStems(Array(selectedStems.length).fill(!allSelected));
+  }
+
+  function handleToggleStem(i) {
+    const next = [...selectedStems];
+    next[i] = !next[i];
+    setSelectedStems(next);
+  }
+
   function handleOpenInPractice() {
     const practiceData = { ...stemsData, stemGains, masterGain };
     sessionStorage.setItem("practiceData", JSON.stringify(practiceData));
@@ -217,7 +235,48 @@ export default function Studio() {
 
         <div className="studio-header-btns">
           <button onClick={handleOpenInPractice}>♩</button>
-          <button>⤓</button>
+          <button onClick={() => setShowExport(!showExport)}>⤓</button>
+
+          {showExport && (
+            <>
+              {/* clicking anywhere outside the popup closes it */}
+              <div
+                className="export-backdrop"
+                onClick={() => setShowExport(false)}
+              />
+              <div className="export-popup">
+                <div className="export-section">
+                  <button>Export Mix</button>
+                </div>
+
+                <div className="export-section">
+                  <span className="export-label">Stems</span>
+                  <button
+                    className={allSelected ? "selected" : ""}
+                    onClick={handleSelectAll}
+                  >
+                    Select All
+                  </button>
+                  <div className="stem-select-grid">
+                    {stemsData?.json.map((stem, i) => (
+                      <button
+                        key={i}
+                        className={selectedStems[i] ? "selected" : ""}
+                        onClick={() => handleToggleStem(i)}
+                      >
+                        {stem.split(".")[0]}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    disabled={!selectedStems.some((selected) => selected)}
+                  >
+                    Export Selected
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -271,9 +330,13 @@ export default function Studio() {
         </div>
         <div className="transport-bar">
           <button onClick={() => handleSkip(-10)}>⏮</button>
-          <button onClick={handlePlay}>
-            {!isLoaded ? "..." : !isPlaying ? "▶" : "⏸"}
-          </button>
+          {!isLoaded ? (
+            <button onClick={handlePlay}>◌</button>
+          ) : !isPlaying ? (
+            <button onClick={handlePlay}>▶</button>
+          ) : (
+            <button onClick={handlePlay}>⏸</button>
+          )}
           <button onClick={() => handleSkip(10)}>⏭</button>
         </div>
       </div>

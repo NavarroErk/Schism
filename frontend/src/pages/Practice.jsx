@@ -537,9 +537,13 @@ export default function Practice() {
   const transport = (
     <div className="practice-transport">
       <button onClick={() => handleSkip(-10)}>⏮</button>
-      <button onClick={handlePlay}>
-        {!isLoaded ? "..." : !isPlaying ? "▶" : "⏸"}
-      </button>
+      {!isLoaded ? (
+        <button onClick={handlePlay}>◌</button>
+      ) : !isPlaying ? (
+        <button onClick={handlePlay}>▶</button>
+      ) : (
+        <button onClick={handlePlay}>⏸</button>
+      )}
       <button onClick={() => handleSkip(10)}>⏭</button>
     </div>
   );
