@@ -15,7 +15,11 @@ export default function Practice() {
   const hasStartedRef = useRef(false);
   const seekOffsetRef = useRef(0);
   const playbackStartRef = useRef(0);
+  const startOffsetRef = useRef(0);
+  const playbackRateRef = useRef(1);
   const trackProgressIntervalRef = useRef(null);
+  const SoundTouchNodeRef = useRef(null);
+  const masterGainRef = useRef(null);
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -26,9 +30,11 @@ export default function Practice() {
   );
   const [loopStart, setLoopStart] = useState(null);
   const [loopEnd, setLoopEnd] = useState(null);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [masterGain, setMasterGain] = useState(1);
 
   useEffect(() => {
-    if (practiceData) getStemFiles();
+    if (practiceData && window.isSecureContext) getStemFiles();
     return () => stopAudio();
   }, []);
 
@@ -37,6 +43,15 @@ export default function Practice() {
       if (!audioContextRef.current) {
         audioContextRef.current = new AudioContext();
       }
+      // all stems feed into one master gain before the speakers
+      masterGainRef.current = audioContextRef.current.createGain();
+      masterGainRef.current.connect(audioContextRef.current.destination);
+      // loaded here instead of at the top so the app doesn't crash on HTTP
+      const { SoundTouchNode } = await import("@soundtouchjs/audio-worklet");
+      const { default: processorUrl } =
+        await import("@soundtouchjs/audio-worklet/processor?url");
+      SoundTouchNodeRef.current = SoundTouchNode;
+      await SoundTouchNode.register(audioContextRef.current, processorUrl);
       const buffers = await Promise.all(
         practiceData.json.map(async (fileName) => {
           const response = await fetch(
@@ -54,16 +69,41 @@ export default function Practice() {
     }
   }
 
+  // source -> SoundTouch (pitch correction) -> stem gain -> master gain -> destination
   function createNodes() {
+    nodesRef.current.forEach(({ stNode }) => stNode.disconnect());
+    const ctx = audioContextRef.current;
+    const rate = playbackRateRef.current;
     const nodes = audioBuffersRef.current.map((buffer) => {
-      const source = audioContextRef.current.createBufferSource();
+      const source = ctx.createBufferSource();
       source.buffer = buffer;
-      const gainNode = audioContextRef.current.createGain();
-      source.connect(gainNode);
-      gainNode.connect(audioContextRef.current.destination);
-      return { source, gainNode };
+      source.playbackRate.value = rate;
+      const stNode = new SoundTouchNodeRef.current({ context: ctx });
+      stNode.playbackRate.value = rate;
+      const gainNode = ctx.createGain();
+      source.connect(stNode);
+      stNode.connect(gainNode);
+      gainNode.connect(masterGainRef.current);
+      return { source, stNode, gainNode };
     });
     nodesRef.current = nodes;
+  }
+
+  // song position in seconds, accounting for playback speed
+  function getPosition() {
+    return (
+      startOffsetRef.current +
+      (audioContextRef.current.currentTime - playbackStartRef.current) *
+        playbackRateRef.current
+    );
+  }
+
+  function startProgressInterval() {
+    trackProgressIntervalRef.current = setInterval(() => {
+      setTrackProgress(
+        (getPosition() / audioBuffersRef.current[0].duration) * 100,
+      );
+    }, 100);
   }
 
   function handlePlay() {
@@ -86,7 +126,8 @@ export default function Practice() {
         });
         const offset = seekOffsetRef.current;
         const startTime = audioContextRef.current.currentTime;
-        playbackStartRef.current = startTime - offset;
+        playbackStartRef.current = startTime;
+        startOffsetRef.current = offset;
         nodesRef.current.forEach(({ source }) =>
           source.start(startTime, offset),
         );
@@ -94,13 +135,7 @@ export default function Practice() {
         hasStartedRef.current = true;
         seekOffsetRef.current = 0;
       }
-      trackProgressIntervalRef.current = setInterval(() => {
-        setTrackProgress(
-          ((audioContextRef.current.currentTime - playbackStartRef.current) /
-            audioBuffersRef.current[0].duration) *
-            100,
-        );
-      }, 100);
+      startProgressInterval();
       setIsPlaying(true);
     } else {
       clearInterval(trackProgressIntervalRef.current);
@@ -124,14 +159,9 @@ export default function Practice() {
       });
       const startTime = audioContextRef.current.currentTime;
       nodesRef.current.forEach(({ source }) => source.start(startTime, offset));
-      playbackStartRef.current = audioContextRef.current.currentTime - offset;
-      trackProgressIntervalRef.current = setInterval(() => {
-        setTrackProgress(
-          ((audioContextRef.current.currentTime - playbackStartRef.current) /
-            duration) *
-            100,
-        );
-      }, 100);
+      playbackStartRef.current = startTime;
+      startOffsetRef.current = offset;
+      startProgressInterval();
     } else {
       nodesRef.current.forEach(({ source }) => {
         try {
@@ -140,7 +170,6 @@ export default function Practice() {
       });
       seekOffsetRef.current = offset;
       hasStartedRef.current = false;
-      playbackStartRef.current = audioContextRef.current.currentTime - offset;
     }
   }
 
@@ -165,6 +194,27 @@ export default function Practice() {
     nodesRef.current[i].gainNode.gain.value = val;
   }
 
+  function handleMasterGain(e) {
+    const val = parseFloat(e.target.value);
+    setMasterGain(val);
+    masterGainRef.current.gain.value = val;
+  }
+
+  function handlePlaybackRate(e) {
+    const rate = parseFloat(e.target.value);
+    // lock in current position before the speed changes
+    if (hasStartedRef.current) {
+      startOffsetRef.current = getPosition();
+      playbackStartRef.current = audioContextRef.current.currentTime;
+    }
+    playbackRateRef.current = rate;
+    setPlaybackRate(rate);
+    nodesRef.current.forEach(({ source, stNode }) => {
+      source.playbackRate.value = rate;
+      stNode.playbackRate.value = rate;
+    });
+  }
+
   function stopAudio() {
     clearInterval(trackProgressIntervalRef.current);
     if (audioContextRef.current) audioContextRef.current.close();
@@ -185,6 +235,14 @@ export default function Practice() {
     const m = Math.floor(d / 60);
     const s = Math.floor(d % 60);
     return `${m}:${s.toString().padStart(2, "0")}`;
+  }
+
+  if (!window.isSecureContext) {
+    return (
+      <div className="practice-page">
+        <p>Practice mode requires HTTPS (or localhost).</p>
+      </div>
+    );
   }
 
   const radius = 110;
@@ -246,6 +304,18 @@ export default function Practice() {
                     <span className="fader-label">{stem.split(".")[0]}</span>
                   </div>
                 ))}
+                <div className="fader-channel master-channel">
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={masterGain}
+                    onChange={handleMasterGain}
+                    style={{ touchAction: "none" }}
+                  />
+                  <span className="fader-label">Master</span>
+                </div>
               </div>
             </TabPanel>
             <TabPanel>
@@ -298,6 +368,18 @@ export default function Practice() {
                 <span className="fader-label">{stem.split(".")[0]}</span>
               </div>
             ))}
+            <div className="fader-channel master-channel">
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={masterGain}
+                onChange={handleMasterGain}
+                style={{ touchAction: "none" }}
+              />
+              <span className="fader-label">Master</span>
+            </div>
           </div>
           <div className="markers-panel">
             <div className="marker-buttons">
@@ -327,6 +409,18 @@ export default function Practice() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="speed-control">
+        <span>Speed: {Math.round(playbackRate * 100)}%</span>
+        <input
+          type="range"
+          min={0.5}
+          max={1.5}
+          step={0.01}
+          value={playbackRate}
+          onChange={handlePlaybackRate}
+        />
       </div>
 
       <div className="practice-transport">
