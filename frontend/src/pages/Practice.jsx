@@ -29,6 +29,7 @@ export default function Practice() {
   const trackProgressIntervalRef = useRef(null);
   const SoundTouchNodeRef = useRef(null);
   const masterGainRef = useRef(null);
+  const stNodeRef = useRef(null);
 
   // refs that mirror state
   const isPlayingRef = useRef(false);
@@ -58,7 +59,7 @@ export default function Practice() {
   async function getStemFiles() {
     try {
       if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
+        audioContextRef.current = new AudioContext({ latencyHint: "playback" });
       }
       // stems feed into master gain before the speakers
       masterGainRef.current = audioContextRef.current.createGain();
@@ -86,23 +87,26 @@ export default function Practice() {
     }
   }
 
-  // source -> SoundTouch -> stem gain -> master gain -> destination
+  // source -> stem gain -> SoundTouch -> master gain -> destination
   function createNodes() {
-    nodesRef.current.forEach(({ stNode }) => stNode.disconnect());
+    if (stNodeRef.current) stNodeRef.current.disconnect();
     const ctx = audioContextRef.current;
     const rate = playbackRateRef.current;
+    const stNode = new SoundTouchNodeRef.current({ context: ctx });
+    stNode.setInterpolationStrategyParams({ zeroCrossings: 2 });
+    stNode.setStretchParameters({ seekWindowMs: 12 });
+    stNode.playbackRate.value = rate;
+    stNode.connect(masterGainRef.current);
+    stNodeRef.current = stNode;
     const nodes = audioBuffersRef.current.map((buffer, i) => {
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.playbackRate.value = rate;
-      const stNode = new SoundTouchNodeRef.current({ context: ctx });
-      stNode.playbackRate.value = rate;
       const gainNode = ctx.createGain();
       gainNode.gain.value = stemGainsRef.current[i];
-      source.connect(stNode);
-      stNode.connect(gainNode);
-      gainNode.connect(masterGainRef.current);
-      return { source, stNode, gainNode };
+      source.connect(gainNode);
+      gainNode.connect(stNode);
+      return { source, gainNode };
     });
     nodesRef.current = nodes;
   }
@@ -314,10 +318,10 @@ export default function Practice() {
     }
     playbackRateRef.current = rate;
     setPlaybackRate(rate);
-    nodesRef.current.forEach(({ source, stNode }) => {
+    nodesRef.current.forEach(({ source }) => {
       source.playbackRate.value = rate;
-      stNode.playbackRate.value = rate;
     });
+    stNodeRef.current.playbackRate.value = rate;
   }
 
   function stopAudio() {
