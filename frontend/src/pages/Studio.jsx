@@ -9,6 +9,7 @@ export default function Studio() {
   const audioContextRef = useRef(null);
   const audioBuffersRef = useRef();
   const nodesRef = useRef([]);
+  const masterGainRef = useRef(null);
 
   const [stemsData, setStemsData] = useState(
     location.state || JSON.parse(sessionStorage.getItem("studioData")),
@@ -24,6 +25,7 @@ export default function Studio() {
   const [stemGains, setStemGains] = useState(
     stemsData ? Array(stemsData.json.length).fill(1) : [],
   );
+  const [masterGain, setMasterGain] = useState(1);
 
   const hasStartedRef = useRef(false);
   const seekOffsetRef = useRef(0);
@@ -40,6 +42,9 @@ export default function Studio() {
       if (!audioContextRef.current) {
         audioContextRef.current = new AudioContext();
       }
+      // stems feed into master gain before the speakers
+      masterGainRef.current = audioContextRef.current.createGain();
+      masterGainRef.current.connect(audioContextRef.current.destination);
       const buffers = await Promise.all(
         stemsData.json.map(async (fileName) => {
           const response = await fetch(
@@ -66,7 +71,7 @@ export default function Studio() {
       source.buffer = buffer;
       const gainNode = audioContextRef.current.createGain();
       source.connect(gainNode);
-      gainNode.connect(audioContextRef.current.destination);
+      gainNode.connect(masterGainRef.current);
       return { source, gainNode };
     });
     nodesRef.current = nodes;
@@ -173,6 +178,12 @@ export default function Studio() {
     nodesRef.current[i].gainNode.gain.value = parseFloat(e.target.value);
   }
 
+  function handleMasterGain(e) {
+    const val = parseFloat(e.target.value);
+    setMasterGain(val);
+    masterGainRef.current.gain.value = val;
+  }
+
   function stopAudio() {
     clearInterval(trackProgressIntervalRef.current);
     if (audioContextRef.current) audioContextRef.current.close();
@@ -235,6 +246,17 @@ export default function Studio() {
               <span className="fader-label">{stem.split(".")[0]}</span>
             </div>
           ))}
+          <div className="fader-channel master-channel">
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={masterGain}
+              onChange={handleMasterGain}
+            />
+            <span className="fader-label">Master</span>
+          </div>
         </div>
         <div className="transport-bar">
           <button>⏮</button>
