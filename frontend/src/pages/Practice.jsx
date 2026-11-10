@@ -48,7 +48,7 @@ export default function Practice() {
   const [loopStart, setLoopStart] = useState(null); // percent/null
   const [loopEnd, setLoopEnd] = useState(null); // percent/null
   const [playbackRate, setPlaybackRate] = useState(1);
-  const [masterGain, setMasterGain] = useState(1);
+  const [masterGain, setMasterGain] = useState(practiceData?.masterGain ?? 1);
   const [seekMode, setSeekMode] = useState("circle"); // "circle" / "line"
 
   useEffect(() => {
@@ -63,6 +63,8 @@ export default function Practice() {
       }
       // stems feed into master gain before the speakers
       masterGainRef.current = audioContextRef.current.createGain();
+      masterGainRef.current.gain.value = practiceData?.masterGain ?? 1;
+      masterGainRef.current.connect(audioContextRef.current.destination);
       masterGainRef.current.connect(audioContextRef.current.destination);
       // load here to avoid crashes on HTTP (non-secure)
       const { SoundTouchNode } = await import("@soundtouchjs/audio-worklet");
@@ -229,6 +231,13 @@ export default function Practice() {
       seekOffsetRef.current = seconds;
       hasStartedRef.current = false;
     }
+  }
+
+  // skip forward/back by seconds
+  function handleSkip(seconds) {
+    if (!audioBuffersRef.current) return;
+    const current = pctToSeconds(trackProgress);
+    seekTo(Math.min(Math.max(current + seconds, 0), getDuration()));
   }
 
   // scrubbing
@@ -527,11 +536,11 @@ export default function Practice() {
 
   const transport = (
     <div className="practice-transport">
-      <button>⏮</button>
+      <button onClick={() => handleSkip(-10)}>⏮</button>
       <button onClick={handlePlay}>
         {!isLoaded ? "..." : !isPlaying ? "▶" : "⏸"}
       </button>
-      <button>⏭</button>
+      <button onClick={() => handleSkip(10)}>⏭</button>
     </div>
   );
 

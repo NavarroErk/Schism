@@ -140,10 +140,21 @@ export default function Studio() {
 
   function handleSeek(e) {
     const pct = parseFloat(e.target.value);
-    const duration = audioBuffersRef.current[0].duration;
-    const offset = (pct / 100) * duration;
+    seekTo((pct / 100) * audioBuffersRef.current[0].duration);
+  }
 
-    setTrackProgress(pct);
+  // skip forward/back by seconds
+  function handleSkip(seconds) {
+    if (!audioBuffersRef.current) return;
+    const duration = audioBuffersRef.current[0].duration;
+    const current = (trackProgress / 100) * duration;
+    seekTo(Math.min(Math.max(current + seconds, 0), duration));
+  }
+
+  // jump to a position (seconds)
+  function seekTo(offset) {
+    const duration = audioBuffersRef.current[0].duration;
+    setTrackProgress((offset / duration) * 100);
 
     if (isPlaying) {
       clearInterval(trackProgressIntervalRef.current);
@@ -191,7 +202,7 @@ export default function Studio() {
   }
 
   function handleOpenInPractice() {
-    const practiceData = { ...stemsData, stemGains };
+    const practiceData = { ...stemsData, stemGains, masterGain };
     sessionStorage.setItem("practiceData", JSON.stringify(practiceData));
     navigate("/practice", { state: practiceData });
   }
@@ -259,11 +270,11 @@ export default function Studio() {
           </div>
         </div>
         <div className="transport-bar">
-          <button>⏮</button>
+          <button onClick={() => handleSkip(-10)}>⏮</button>
           <button onClick={handlePlay}>
             {!isLoaded ? "..." : !isPlaying ? "▶" : "⏸"}
           </button>
-          <button>⏭</button>
+          <button onClick={() => handleSkip(10)}>⏭</button>
         </div>
       </div>
     </div>
