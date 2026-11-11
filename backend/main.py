@@ -12,7 +12,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 import shutil
-from helpers import check_dependencies, get_jobs_data, write_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, update_job_path, get_job_directory
+from helpers import check_dependencies, get_jobs_data, write_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, update_job_path, get_job_directory, get_stem_file_names, render_mix
 
 
 
@@ -138,12 +138,7 @@ async def post_file_job(
 
 @app.get("/api/jobs/{id}/stem-file-names")
 def get_stem_paths_by_id(id: str):
-    stems_dir = os.path.join(get_job_directory(id), "output")
-    stem_file_names = []
-    for stem in os.listdir(stems_dir):
-        stem_file_names.append(stem)
-        
-    return stem_file_names
+    return get_stem_file_names(id)
 
 @app.get("/api/jobs/{id}/stem/{stemFileName}")
 def get_stem_file(id: str, stemFileName: str):
@@ -154,6 +149,34 @@ def get_stem_file(id: str, stemFileName: str):
     return FileResponse(os.path.join(path_to_stem, stemFileName))
 
         
+
+class ExportRequest(BaseModel):
+    output_format: Literal["wav", "flac", "mp3"]
+    gains: dict[str, float]
+    save_to_server: bool
+    download: bool
+
+@app.post("/api/jobs/{id}/export")
+def export_mix(id: str, request: ExportRequest, background_tasks: BackgroundTasks):
+    job = find_job_by_id(id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if not request.save_to_server and not request.download:
+        raise HTTPException(status_code=400, detail="Choose at least one destination")
+
+    try:
+        mix_path = render_mix(id, request.gains, request.output_format, request.save_to_server)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+    # download only - delete temp copy after it's sent
+    if not request.save_to_server:
+        background_tasks.add_task(shutil.rmtree, os.path.dirname(mix_path), ignore_errors=True)
+
+    if request.download:
+        return FileResponse(mix_path, filename=os.path.basename(mix_path))
+    return {"saved": os.path.basename(mix_path)}
+
 
 @app.get("/api/jobs")
 def get_jobs(response: Response):

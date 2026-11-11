@@ -76,7 +76,13 @@
     border-radius: 4px;
 }
 
-.stem-select-grid {
+.format-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+}
+
+.destination-options {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;

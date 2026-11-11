@@ -1,7 +1,8 @@
 from fastapi import HTTPException
 import shutil
 import importlib.util
-# import subprocess
+import subprocess
+import tempfile
 import json
 import yt_dlp
 import demucs.separate
@@ -11,6 +12,8 @@ import logging
 
 
 logger = logging.getLogger("uvicorn")
+
+MIX_SUFFIX = " - MIX"
 
 
 def check_dependencies():
@@ -49,9 +52,8 @@ def run_ytdlp(job_id, url):
             extracted_info = ytdlp.extract_info(url, download=True)
             downloaded_title = sanitize_filename(f'{extracted_info["title"]}')
             file_name = f"{downloaded_title}.wav"
-        
+        # 
         # rename directory to include job_id slice for uniqueness
-        # os.rename(f"jobs/{job_id}", f"jobs/{downloaded_title} ({job_id[:5]})")
         os.rename(os.path.join("jobs", job_id), os.path.join("jobs", f"{downloaded_title} ({job_id[:5]})"))
 
         # jobs.json updates
@@ -154,6 +156,55 @@ def update_job_status(job_id, status, error = None):
             break
     write_jobs_data(jobs_data)
 
+
+
+def get_stem_file_names(job_id):
+    # everything in output/ ; except exported mixes
+    stems_dir = os.path.join(get_job_directory(job_id), "output")
+    return [
+        stem for stem in os.listdir(stems_dir)
+        if not os.path.splitext(stem)[0].endswith(MIX_SUFFIX)
+    ]
+
+
+def render_mix(job_id, gains, output_format, save_to_server):
+    job = find_job_by_id(job_id)
+    if job is None:
+        raise FileNotFoundError("No job found.")
+    stems_dir = os.path.join(get_job_directory(job_id), "output")
+    stems = get_stem_file_names(job_id)
+
+    # saved mixes go in output/ , download-only mixes go to a temp folder
+    output_dir = stems_dir if save_to_server else tempfile.mkdtemp()
+    job_name = os.path.splitext(job["file_name"] or "mix")[0]
+    mix_path = os.path.join(output_dir, f"{job_name}{MIX_SUFFIX}.{output_format}")
+
+    # each stem gets its fader volume, then they're summed at unity (no master gain)
+    inputs = []
+    filters = []
+    for i, stem in enumerate(stems):
+        gain = min(max(float(gains.get(stem, 1.0)), 0.0), 1.0)
+        inputs += ["-i", os.path.join(stems_dir, stem)]
+        filters.append(f"[{i}:a]volume={gain}[a{i}]")
+    mix_inputs = "".join(f"[a{i}]" for i in range(len(stems)))
+    filters.append(f"{mix_inputs}amix=inputs={len(stems)}:normalize=0[out]")
+
+    codecs = {
+        "wav": ["-c:a", "pcm_s16le"],
+        "flac": ["-c:a", "flac"],
+        "mp3": ["-c:a", "libmp3lame", "-b:a", "320k"],
+    }
+
+    result = subprocess.run(
+        ["ffmpeg", "-y", *inputs, "-filter_complex", ";".join(filters),
+         "-map", "[out]", *codecs[output_format], mix_path],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr[-500:])
+
+    logger.info(f"Mix exported to [{mix_path}] for job: {job_id}.")
+    return mix_path
 
 
 def sanitize_filename(title):

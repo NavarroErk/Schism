@@ -29,11 +29,11 @@ export default function Studio() {
 
   // export popup
   const [showExport, setShowExport] = useState(false);
-  const [selectedStems, setSelectedStems] = useState(
-    stemsData ? Array(stemsData.json.length).fill(false) : [],
-  );
-  const allSelected =
-    selectedStems.length > 0 && selectedStems.every((selected) => selected);
+  const [exportFormat, setExportFormat] = useState(null); // "wav" / "flac" / "mp3"
+  const [exportDevice, setExportDevice] = useState(false);
+  const [exportServer, setExportServer] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const allDestinations = exportDevice && exportServer;
 
   const hasStartedRef = useRef(false);
   const seekOffsetRef = useRef(0);
@@ -209,14 +209,50 @@ export default function Studio() {
     setIsPlaying(false);
   }
 
-  function handleSelectAll() {
-    setSelectedStems(Array(selectedStems.length).fill(!allSelected));
+  function handleSelectAllDestinations() {
+    setExportDevice(!allDestinations);
+    setExportServer(!allDestinations);
   }
 
-  function handleToggleStem(i) {
-    const next = [...selectedStems];
-    next[i] = !next[i];
-    setSelectedStems(next);
+  // server mixes the stems with their fader gains (master not included)
+  async function handleExport() {
+    setIsExporting(true);
+    try {
+      const gains = {};
+      stemsData.json.forEach((stem, i) => {
+        gains[stem] = stemGains[i];
+      });
+
+      const response = await fetch(`api/jobs/${stemsData.jobId}/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          output_format: exportFormat,
+          gains,
+          save_to_server: exportServer,
+          download: exportDevice,
+        }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+
+      // download to device
+      if (exportDevice) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${stemsData.fileName.replace(/\.[^.]+$/, "")} - MIX.${exportFormat}`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } else {
+        alert("Mix saved to server.");
+      }
+      setShowExport(false);
+    } catch (error) {
+      alert(error);
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   function handleOpenInPractice() {
@@ -246,32 +282,54 @@ export default function Studio() {
               />
               <div className="export-popup">
                 <div className="export-section">
-                  <button>Export Mix</button>
-                </div>
-
-                <div className="export-section">
-                  <span className="export-label">Stems</span>
-                  <button
-                    className={allSelected ? "selected" : ""}
-                    onClick={handleSelectAll}
-                  >
-                    Select All
-                  </button>
-                  <div className="stem-select-grid">
-                    {stemsData?.json.map((stem, i) => (
+                  <span className="export-label">Format</span>
+                  <div className="format-options">
+                    {["wav", "flac", "mp3"].map((format) => (
                       <button
-                        key={i}
-                        className={selectedStems[i] ? "selected" : ""}
-                        onClick={() => handleToggleStem(i)}
+                        key={format}
+                        className={exportFormat === format ? "selected" : ""}
+                        onClick={() => setExportFormat(format)}
                       >
-                        {stem.split(".")[0]}
+                        {format.toUpperCase()}
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="export-section">
+                  <span className="export-label">Save To</span>
                   <button
-                    disabled={!selectedStems.some((selected) => selected)}
+                    className={allDestinations ? "selected" : ""}
+                    onClick={handleSelectAllDestinations}
                   >
-                    Export Selected
+                    Select All
+                  </button>
+                  <div className="destination-options">
+                    <button
+                      className={exportDevice ? "selected" : ""}
+                      onClick={() => setExportDevice(!exportDevice)}
+                    >
+                      Device
+                    </button>
+                    <button
+                      className={exportServer ? "selected" : ""}
+                      onClick={() => setExportServer(!exportServer)}
+                    >
+                      Server
+                    </button>
+                  </div>
+                </div>
+
+                <div className="export-section">
+                  <button
+                    onClick={handleExport}
+                    disabled={
+                      !exportFormat ||
+                      (!exportDevice && !exportServer) ||
+                      isExporting
+                    }
+                  >
+                    {isExporting ? "◌" : "Export Mix"}
                   </button>
                 </div>
               </div>
