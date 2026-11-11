@@ -4,3 +4,4 @@ yt-dlp
 demucs
 numpy
 python-multipart
+tzdata

@@ -1,20 +1,337 @@
+:root {
+  --navbar-height: 60px;
+
+  /* surfaces */
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface-2: #171717;
+  --surface-3: #1f1f1f;
+  --border: #232323;
+  --border-strong: #303030;
+
+  /* text */
+  --text: #f1f1f1;
+  --text-muted: #8c8c8c;
+  --text-dim: #5c5c5c;
+
+  /* accent */
+  --accent: #ff8a1f;
+  --accent-hover: #ffa04a;
+  --accent-press: #e8760c;
+  --accent-soft: rgba(255, 138, 31, 0.12);
+  --accent-line: rgba(255, 138, 31, 0.35);
+  --accent-glow: rgba(255, 138, 31, 0.55);
+  --on-accent: #120800;
+
+  /* status */
+  --success: #4cc38a;
+  --success-soft: rgba(76, 195, 138, 0.12);
+  --danger: #ef5b5b;
+  --danger-soft: rgba(239, 91, 91, 0.12);
+  --marker-a: #4cc38a;
+  --marker-b: #ef5b5b;
+
+  --radius-lg: 14px;
+  --radius: 10px;
+  --radius-sm: 7px;
+
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
 body {
   margin: 0;
-  background: #000;
-  color: #fff;
+  background: var(--bg);
+  color: var(--text);
   color-scheme: dark;
+  font-family: var(--font);
+  font-size: 15px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-:root {
-  --navbar-height: 60px
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
 }
+
+/* base buttons */
+
+button {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  transition:
+    background-color 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    color 0.15s var(--ease),
+    transform 0.1s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+
+button:hover:not(:disabled) {
+  background: var(--surface-3);
+  border-color: #3d3d3d;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+svg.icon {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+/* scrollbars */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* navbar */
 
 nav {
-  background-color: #1b1b1b;
+  position: relative;
+  z-index: 20;
   height: var(--navbar-height);
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding-left: 16px;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 16px;
+  background: rgba(10, 10, 10, 0.92);
+  border-bottom: 1px solid var(--border);
 }
 
+nav a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color 0.15s var(--ease);
+}
+
+nav a::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform 0.2s var(--ease);
+}
+
+nav a:hover {
+  color: var(--text);
+}
+
+nav a.active {
+  color: var(--accent);
+}
+
+nav a.active::after {
+  transform: scaleX(1);
+}
+
+@media (max-width: 420px) {
+  nav {
+    gap: 0;
+    padding: 0 6px;
+  }
+
+  nav a {
+    padding: 0 11px;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+  }
+
+  nav a::after {
+    left: 11px;
+    right: 11px;
+  }
+}
+
+/* shared choice buttons (pick one) - used by home + export popup */
+
+.choice-group {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+}
+
+.choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  user-select: none;
+  /* labels always stay on one line */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    background-color 0.15s var(--ease),
+    border-color 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.choice:hover {
+  color: var(--text);
+  border-color: #3d3d3d;
+}
+
+/* radio stays in the DOM (not display:none) so native required validation still works */
+.choice input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.choice:has(input:checked) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.choice:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* primary button */
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-primary:active:not(:disabled) {
+  background: var(--accent-press);
+}
+
+/* spinner */
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* marquee - scrolls overflowing single-line text back and forth */
+
+.marquee {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.marquee-inner {
+  display: inline-block;
+}
+
+.marquee.is-overflowing .marquee-inner {
+  animation: marquee var(--marquee-duration) ease-in-out infinite alternate;
+}
+
+@keyframes marquee {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+  85%,
+  100% {
+    transform: translateX(calc(-1 * var(--marquee-distance)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee.is-overflowing .marquee-inner {
+    animation: none;
+  }
+}

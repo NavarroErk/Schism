@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Marquee from "./Marquee.jsx";
+import { EditIcon, OpenIcon, RetryIcon, TrashIcon } from "./Icons.jsx";
 
-function QueueItem({ job, fetchJobsData, key }) {
+function QueueItem({ job, fetchJobsData }) {
   const navigate = useNavigate();
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -93,20 +95,18 @@ function QueueItem({ job, fetchJobsData, key }) {
     setIsExpanded(!isExpanded);
   }
 
+  function getJobState() {
+    if (!terminalStatuses.includes(job.status)) return "active";
+    return job.status == "Success" ? "success" : "failed";
+  }
+
   function getJobClassName() {
-    if (terminalStatuses.includes(job.status)) {
-      // job not active
-      if (job.status == "Success") {
-        // not active, success
-        return "queue-item";
-      } else {
-        // not active, failed
-        return "queue-item queue-item-failed";
-      }
-    } else {
-      // active
-      return "queue-item queue-item-active";
-    }
+    const state = getJobState();
+    let className = "queue-item";
+    if (state === "failed") className += " queue-item-failed";
+    if (state === "active") className += " queue-item-active";
+    if (isExpanded) className += " is-expanded";
+    return className;
   }
 
   function isJobActive() {
@@ -117,60 +117,82 @@ function QueueItem({ job, fetchJobsData, key }) {
     }
   }
 
+  const title = job.file_name ? job.file_name.split(".")[0] : "Untitled";
+  const isActive = isJobActive();
+
   return (
     <div
       onClick={handleClick}
       onMouseDown={handleMouseDown}
       className={getJobClassName()}
-      //   key={key}
     >
       <div className="queue-item-filename-date-row">
-        {job.error ? (
-          <>
-            {" "}
-            <p>Status: {job.status}</p> <p>{job.date}</p>
-          </>
-        ) : (
-          <>
-            {" "}
-            <p>{job.file_name ? job.file_name.split(".")[0] : "N/A"}</p>{" "}
-            <p>{job.date}</p>{" "}
-          </>
-        )}
-
-        {/* {job.error ? <p>{job.error}</p> : <p>File: {job.file_name}</p>} */}
-
-        {/* <p>{job.date}</p> */}
+        <Marquee className="queue-item-title" text={title} />
+        <span className="queue-item-date">{job.date}</span>
       </div>
-      {job.error ? (
-        <p>Error: {job.error.replace(/\x1B\[[0-9;]*m/g, "")}</p>
-      ) : (
-        <p>Status: {job.status}</p>
-      )}
-      {/* <p>Status: {job.status}</p> */}
+
+      <div className="queue-item-status-row">
+        <span className="status-pill">
+          <span className="status-pill-dot" />
+          {job.status}
+        </span>
+        {job.error && (
+          <Marquee
+            className="queue-item-error"
+            text={job.error.replace(/\x1B\[[0-9;]*m/g, "")}
+          />
+        )}
+      </div>
 
       {isExpanded === true ? (
-        <>
-          <p>URL: {job.url}</p>
-          <p>Path: {job.path ? job.path : "No path found."}</p>
-          <div className="queue-item-format-model-row">
-            <p>Output Format: {job.output_format}</p>
-            <p>Demucs Model: {job.demucs_model}</p>
-          </div>
-          <p>Job ID: {job.job_id}</p>
-        </>
+        <dl className="queue-item-details">
+          <dt>URL</dt>
+          <dd>
+            <Marquee text={job.url || "—"} />
+          </dd>
+          <dt>Path</dt>
+          <dd>
+            <Marquee text={job.path ? job.path : "No path found."} />
+          </dd>
+          <dt>Format</dt>
+          <dd className="queue-item-format-model-row">
+            <span>{job.output_format}</span>
+            <span className="queue-item-detail-label">Model</span>
+            <span>{job.demucs_model}</span>
+          </dd>
+          <dt>Job ID</dt>
+          <dd>
+            <Marquee text={job.job_id} />
+          </dd>
+        </dl>
       ) : (
         <></>
       )}
-      <div className="job-item-buttons">
+      <div className={`job-item-buttons ${isActive ? "is-locked" : ""}`}>
         {terminalStatuses.includes(job.status) && job.status !== "Success" ? (
-          <button>Retry</button>
+          <button className="job-btn">
+            <RetryIcon />
+            Retry
+          </button>
         ) : (
-          <button onClick={(e) => handleRename(123, e)}>Rename</button>
+          <button className="job-btn" onClick={(e) => handleRename(123, e)}>
+            <EditIcon />
+            Rename
+          </button>
         )}
-        <button onClick={(e) => handleDelete(job.job_id, e)}>Delete</button>
-        <button onClick={(e) => handleOpenInStudio(job.job_id, e)}>
+        <button
+          className="job-btn job-btn-danger"
+          onClick={(e) => handleDelete(job.job_id, e)}
+        >
+          <TrashIcon />
+          Delete
+        </button>
+        <button
+          className="job-btn job-btn-primary"
+          onClick={(e) => handleOpenInStudio(job.job_id, e)}
+        >
           Open In Studio
+          <OpenIcon />
         </button>
       </div>
     </div>

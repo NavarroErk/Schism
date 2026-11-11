@@ -7,6 +7,10 @@
   gap: 12px;
   overflow: hidden;
   box-sizing: border-box;
+  /* no text highlighting while dragging / long-pressing */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* seek display (circle or line) */
@@ -50,26 +54,53 @@
   right: 0;
   width: 36px;
   height: 36px;
-  padding: 0;
   z-index: 1;
+  font-size: 1.05rem;
+}
+
+/* circle */
+
+.seek-ring-track {
+  stroke: #1b1b1b;
+  stroke-width: 5px;
+}
+
+.seek-ring-progress {
+  stroke: var(--accent);
+  stroke-width: 5px;
+  filter: drop-shadow(0 0 5px rgba(255, 138, 31, 0.55));
 }
 
 svg .current-time {
-  font-size: 34px;
-  fill: white;
+  font-size: 36px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  fill: var(--text);
 }
 
 svg .total-time {
-  font-size: 18px;
-  fill: rgb(160, 160, 160);
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  fill: var(--text-dim);
 }
 
 .loop-arc {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.15);
+  stroke: rgba(255, 138, 31, 0.12);
+  stroke-width: 22px;
+}
+
+svg .marker-a text,
+svg .marker-b text {
+  font-size: 13px;
+  font-weight: 800;
 }
 
 /* line view */
+
 .line-view {
   display: flex;
   flex-direction: column;
@@ -79,20 +110,22 @@ svg .total-time {
 
 .line-time {
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .line-time .current-time {
-  font-size: 2rem;
+  font-size: 2.2rem;
+  font-weight: 600;
 }
 
 .line-time .total-time {
-  font-size: 1.2rem;
-  color: rgb(160, 160, 160);
+  font-size: 1rem;
+  color: var(--text-dim);
 }
 
 .line-seek {
   position: relative;
-  padding-top: 30px; 
+  padding-top: 30px;
   padding-bottom: 8px;
   cursor: pointer;
   touch-action: none;
@@ -109,22 +142,39 @@ svg .total-time {
   position: absolute;
   top: 0;
   height: 100%;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: rgba(255, 138, 31, 0.12);
+  border-radius: 6px;
 }
 
 .line-track {
   position: relative;
   width: 100%;
-  height: 12px;
-  background: rgb(60, 60, 60);
-  border-radius: 6px;
-  overflow: hidden;
+  height: 5px;
+  background: #1b1b1b;
+  border-radius: 3px;
 }
 
 .line-fill {
+  position: relative;
   height: 100%;
-  background: white;
+  background: var(--accent);
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(255, 138, 31, 0.55);
+}
+
+/* playhead knob at the end of the fill */
+.line-fill::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 10px var(--accent-glow);
 }
 
 .line-marker {
@@ -134,60 +184,35 @@ svg .total-time {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 800;
   line-height: 1;
   pointer-events: none;
 }
 
 /* A/B colors */
 .marker-a {
-  fill: rgb(90, 200, 120);
-  color: rgb(90, 200, 120);
+  fill: var(--marker-a);
+  color: var(--marker-a);
 }
 
 .marker-b {
-  fill: rgb(235, 100, 100);
-  color: rgb(235, 100, 100);
+  fill: var(--marker-b);
+  color: var(--marker-b);
 }
 
-/* mixer  */
+/* mixer (fader look lives in controls.css) */
 
 .practice-fader-panel {
   display: flex;
   justify-content: space-around;
   align-items: center;
   height: 100%;
-  padding: 10px;
+  padding: 12px 10px;
   box-sizing: border-box;
 }
 
-.practice-fader-panel .fader-channel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
-.practice-fader-panel .fader-channel input[type="range"] {
-  writing-mode: vertical-lr;
-  direction: rtl;
-  height: calc(100% - 24px);
-  touch-action: none;
-}
-
-.fader-label {
-  font-size: 0.75rem;
-  color: rgb(160, 160, 160);
-}
-
-.master-channel > input {
-  /* border-left: 1px solid rgb(77, 77, 77); */
-  /* padding-left: 12px; */
-  background-color: green;
-}
-
-/* markers / speed / transport */
+/* markers */
 
 .marker-buttons {
   display: flex;
@@ -197,36 +222,142 @@ svg .total-time {
 
 .marker-buttons > button {
   flex: 1;
-  height: 40px;
-  font-weight: bold;
+  height: 44px;
+  background: transparent;
+  border-color: var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.marker-buttons > button.marker-a {
+  color: var(--marker-a);
+  border-color: rgba(76, 195, 138, 0.35);
+}
+
+.marker-buttons > button.marker-b {
+  color: var(--marker-b);
+  border-color: rgba(239, 91, 91, 0.35);
+}
+
+.marker-buttons > button.marker-a:hover:not(:disabled) {
+  background: var(--success-soft);
+  border-color: var(--marker-a);
+}
+
+.marker-buttons > button.marker-b:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--marker-b);
 }
 
 .marker-buttons > button:disabled {
-  opacity: 0.35;
+  opacity: 0.3;
 }
+
+/* speed */
 
 .speed-control {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 
-.speed-control input {
-  width: 100%;
+.speed-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
+
+.speed-label strong {
+  display: inline-block;
+  min-width: 4ch;
+  margin-left: 6px;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  color: var(--accent);
+  text-align: left;
+}
+
+.speed-control input[type="range"] {
+  --fill: 50%;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.speed-control input[type="range"]:focus {
+  outline: none;
+}
+
+/* orange fill up to the value, white tick at 100% */
+.speed-control input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background:
+    linear-gradient(to right, transparent calc(50% - 1px), rgba(255, 255, 255, 0.4) calc(50% - 1px), rgba(255, 255, 255, 0.4) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(to right, var(--accent) var(--fill), #1f1f1f var(--fill));
+}
+
+.speed-control input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background:
+    linear-gradient(to right, transparent calc(50% - 1px), rgba(255, 255, 255, 0.4) calc(50% - 1px), rgba(255, 255, 255, 0.4) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(to right, var(--accent) var(--fill), #1f1f1f var(--fill));
+}
+
+.speed-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: #121212;
+  border: 3px solid var(--accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 0.15s var(--ease);
+}
+
+.speed-control input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #121212;
+  border: 3px solid var(--accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 0.15s var(--ease);
+}
+
+.speed-control input[type="range"]:hover::-webkit-slider-thumb,
+.speed-control input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 6px var(--accent-soft), 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.speed-control input[type="range"]:hover::-moz-range-thumb,
+.speed-control input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 6px var(--accent-soft), 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* transport (button look lives in controls.css) */
 
 .practice-transport {
   display: flex;
   justify-content: center;
-  gap: 20px;
-}
-
-.practice-transport > button {
-  width: 70px;
-  height: 70px;
-  font-size: 1.5rem;
+  align-items: center;
+  gap: 28px;
 }
 
 /* desktop layout */
@@ -237,21 +368,28 @@ svg .total-time {
 
 .practice-desktop {
   display: flex;
+  gap: 12px;
   width: 100%;
   height: 260px;
   flex-shrink: 0;
-  border: 1px solid rgb(77, 77, 77);
   box-sizing: border-box;
 }
 
+.practice-desktop > * {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
 .practice-desktop .practice-fader-panel {
-  width: 65%;
-  border-right: 1px solid rgb(77, 77, 77);
+  flex: 65 1 0;
+  min-width: 0;
 }
 
 .practice-desktop .markers-panel {
-  width: 35%;
-  padding: 12px;
+  flex: 35 1 0;
+  min-width: 0;
+  padding: 16px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -262,6 +400,11 @@ svg .total-time {
 /* mobile layout */
 
 @media (max-width: 600px), (orientation: portrait) {
+  .practice-page {
+    padding: 10px;
+    gap: 10px;
+  }
+
   .practice-desktop {
     display: none;
   }
@@ -269,18 +412,30 @@ svg .total-time {
   .practice-mobile {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     width: 100%;
     flex-shrink: 0;
   }
 
-  .practice-mobile .speed-control input {
+  .practice-mobile .speed-control input[type="range"] {
     width: 80%;
   }
 
   .mobile-bottom {
     display: flex;
     flex-direction: column;
+    gap: 14px;
+  }
+
+  .mobile-bottom .react-tabs {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .mobile-bottom .react-tabs__tab-list {
+    margin: 0;
   }
 
   .tab-body {
@@ -295,10 +450,10 @@ svg .total-time {
   }
 
   .tab-body > .marker-buttons {
-    padding: 0 12px;
+    padding: 0 16px;
   }
 
   .practice-transport {
-    padding-bottom: 16px;
+    padding-bottom: 12px;
   }
 }

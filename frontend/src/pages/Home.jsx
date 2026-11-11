@@ -1,29 +1,53 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
+import {
+  FileAudioIcon,
+  LinkIcon,
+  SpinnerIcon,
+  UploadIcon,
+} from "../components/Icons.jsx";
+import { useToast } from "../components/toast-context.js";
 import "../css/react-tabs.css";
+import "../css/Home.css";
+
+const OUTPUT_FORMATS = [
+  { value: "wav", label: "WAV" },
+  { value: "flac", label: "FLAC" },
+  { value: "mp3", label: "MP3" },
+];
+
+const DEMUCS_MODELS = [
+  {
+    value: "htdemucs",
+    label: "4 Stem",
+    description: "Default. 4 stems: vocals, drums, bass, other.",
+  },
+  {
+    value: "htdemucs_6s",
+    label: "6 Stem",
+    description: "6 stems. Adds guitar and piano.",
+  },
+  {
+    value: "htdemucs_ft",
+    label: "4 Stem FT",
+    description: "Fine-tuned 4 stem. Cleaner, but about 4x slower.",
+  },
+];
 
 export default function Home() {
   const navigate = useNavigate();
+  const showToast = useToast();
 
-  const [dependencyStatus, setDependencyStatus] = useState();
   const [inputType, setInputType] = useState("url");
   const [file, setFile] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [demucsModel, setDemucsModel] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    async function fetchDependencyStatus() {
-      try {
-        const response = await fetch("/api/health");
-        const json = await response.json();
-        console.log("json", json);
-
-        setDependencyStatus(json);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    }
-    fetchDependencyStatus();
-  }, []);
+  const modelDescription = DEMUCS_MODELS.find(
+    (model) => model.value === demucsModel,
+  )?.description;
 
   function pickFile(f) {
     if (!f) return;
@@ -32,7 +56,7 @@ export default function Home() {
     if (["mp3", "flac", "wav", "m4a"].includes(ext)) {
       setFile(f);
     } else {
-      alert("Only MP3, FLAC, WAV and M4A files are allowed.");
+      showToast("Only MP3, FLAC, WAV and M4A files are allowed.", "error");
     }
   }
 
@@ -40,7 +64,27 @@ export default function Home() {
     e.preventDefault();
     const body = Object.fromEntries(new FormData(e.target));
     // console.log("body:", body);
+
+    // our own validation instead of the browser's required bubbles (form is noValidate)
+    if (inputType === "url" && !body.url?.trim()) {
+      showToast("Enter a URL");
+      return;
+    }
+    if (inputType === "file" && !file) {
+      showToast("Choose a file to split");
+      return;
+    }
+    if (!body.output_format) {
+      showToast("Select an output format");
+      return;
+    }
+    if (!body.demucs_model) {
+      showToast("Select a Demucs model");
+      return;
+    }
+
     if (inputType === "url") {
+      setIsSubmitting(true);
       try {
         const response = await fetch("api/jobs/url", {
           method: "POST",
@@ -53,12 +97,15 @@ export default function Home() {
         } else {
           const error = await response.json();
           // console.log(error.detail);
-          alert("Job failed. ");
+          showToast("Job failed.", "error");
         }
       } catch (error) {
-        alert("Server could not be reached.");
+        showToast("Server could not be reached.", "error");
+      } finally {
+        setIsSubmitting(false);
       }
     } else if (inputType === "file") {
+      setIsSubmitting(true);
       try {
         const formData = new FormData();
         formData.append("file", file);
@@ -73,62 +120,77 @@ export default function Home() {
         if (response.ok) {
           navigate("/queue");
         } else {
-          alert("Job Failed");
+          showToast("Job failed.", "error");
         }
       } catch (error) {
-        alert("Server could not be reached.");
+        showToast("Server could not be reached.", "error");
+      } finally {
+        setIsSubmitting(false);
       }
     }
   }
 
   return (
-    <>
-      {/* Tool	Windows	macOS	Linux
-      ffmpeg | winget install Gyan.FFmpeg |	brew install ffmpeg |	sudo apt install ffmpeg*/}
-      {dependencyStatus && (
-        <ul>
-          {<li>status: {dependencyStatus.status}</li>}
-          {dependencyStatus.dependencies.map((dependency) => (
-            <li key={dependency.name}>
-              {dependency.name}: {dependency.found ? "installed" : "missing"}
-            </li>
-          ))}
-        </ul>
-      )}
-      <form onSubmit={handleSubmit}>
+    <div className="home-page">
+      <header className="home-hero">
+        <h1 className="home-logo">
+          SCH<span>ISM</span>
+        </h1>
+        <p className="home-tagline">Stem separation</p>
+      </header>
+
+      <form className="home-form" onSubmit={handleSubmit} noValidate>
         <Tabs>
           <TabList>
-            <Tab onClick={() => setInputType("url")}>Split From URL</Tab>
-            <Tab onClick={() => setInputType("file")}>Split From File</Tab>
+            <Tab onClick={() => setInputType("url")}>From URL</Tab>
+            <Tab onClick={() => setInputType("file")}>From File</Tab>
           </TabList>
 
           <TabPanel>
-            <input
-              type="text"
-              name="url"
-              id="url-input"
-              placeholder="Enter url"
-              autoComplete="off"
-              required
-            />
+            <div className="url-field">
+              <LinkIcon className="url-field-icon" />
+              <input
+                type="text"
+                name="url"
+                id="url-input"
+                placeholder="Paste a URL"
+                autoComplete="off"
+                required
+              />
+            </div>
             {/* Submit should choose the active inputType. Only one of url or filedrop. */}
           </TabPanel>
           <TabPanel>
             <label
-              style={{
-                display: "block",
-                border: "2px dashed gray",
-                padding: 40,
+              className={`file-drop ${isDragging ? "is-dragging" : ""} ${file ? "has-file" : ""}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
               }}
-              onDragOver={(e) => e.preventDefault()}
+              onDragLeave={() => setIsDragging(false)}
               onDrop={(e) => {
                 e.preventDefault();
+                setIsDragging(false);
                 pickFile(e.dataTransfer.files[0]);
               }}
             >
-              {file === null
-                ? "Drag and drop a file here or click to upload."
-                : file.name}
+              {file === null ? (
+                <>
+                  <UploadIcon className="file-drop-icon" />
+                  <span className="file-drop-title">
+                    Drop a file or <u>browse</u>
+                  </span>
+                  <span className="file-drop-hint">MP3, FLAC, WAV, M4A</span>
+                </>
+              ) : (
+                <>
+                  <FileAudioIcon className="file-drop-icon" />
+                  <span className="file-drop-title">{file.name}</span>
+                  <span className="file-drop-hint">
+                    Click to choose another
+                  </span>
+                </>
+              )}
 
               <input
                 type="file"
@@ -139,26 +201,53 @@ export default function Home() {
             </label>
           </TabPanel>
         </Tabs>
-        <div>
-          <select name="output_format" id="output-format-select" required>
-            <option value="" disabled hidden selected>
-              Select Output Format
-            </option>
-            <option value="wav">WAV</option>
-            <option value="flac">FLAC</option>
-            <option value="mp3">MP3</option>
-          </select>
-          <select name="demucs_model" id="model-select" required>
-            <option value="" disabled hidden selected>
-              Select Demucs Model
-            </option>
-            <option value="htdemucs">htdemucs</option>
-            <option value="htdemucs_6s">htdemucs_6s</option>
-            <option value="htdemucs_ft">htdemucs_ft</option>
-          </select>
-          <button type="submit">Submit</button>
+
+        <div className="home-option" role="radiogroup" aria-label="Output format">
+          <span className="field-label">Output format</span>
+          <div className="choice-group">
+            {OUTPUT_FORMATS.map((format) => (
+              <label className="choice" key={format.value}>
+                <input
+                  type="radio"
+                  name="output_format"
+                  value={format.value}
+                  required
+                />
+                {format.label}
+              </label>
+            ))}
+          </div>
         </div>
+
+        <div className="home-option" role="radiogroup" aria-label="Demucs model">
+          <span className="field-label">Demucs model</span>
+          <span className="model-description" aria-live="polite">
+            {modelDescription ?? "Pick a model"}
+          </span>
+          <div className="choice-group">
+            {DEMUCS_MODELS.map((model) => (
+              <label className="choice" key={model.value}>
+                <input
+                  type="radio"
+                  name="demucs_model"
+                  value={model.value}
+                  onChange={() => setDemucsModel(model.value)}
+                  required
+                />
+                {model.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="btn-primary home-submit"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? <SpinnerIcon /> : "Split"}
+        </button>
       </form>
-    </>
+    </div>
   );
 }

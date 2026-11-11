@@ -5,14 +5,13 @@ from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import Literal
-from datetime import datetime, timezone
 import time
 import uuid
 import logging
 import os
 from logging.handlers import RotatingFileHandler
 import shutil
-from helpers import check_dependencies, get_jobs_data, write_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, update_job_path, get_job_directory, get_stem_file_names, render_mix
+from helpers import check_dependencies, get_jobs_data, write_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, update_job_path, get_job_directory, get_stem_file_names, render_mix, get_job_timestamp
 
 
 
@@ -79,8 +78,7 @@ def post_url_job(request: URLJobRequest, background_tasks: BackgroundTasks):
         "url": request.url,
         "file_name": None,
         "path": None,
-        # "date": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-        "date": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "date": get_job_timestamp(),
         "output_format": request.output_format,
         "demucs_model": request.demucs_model,
         "status": "Starting job.",
@@ -116,7 +114,7 @@ async def post_file_job(
         "url": "N/A",
         "file_name": file.filename,
         "path": None,
-        "date": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "date": get_job_timestamp(),
         "output_format": output_format,
         "demucs_model": demucs_model,
         "status": "Starting job.",

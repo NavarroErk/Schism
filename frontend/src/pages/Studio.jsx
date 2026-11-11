@@ -1,10 +1,22 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import {
+  Back10Icon,
+  DownloadIcon,
+  Forward10Icon,
+  HeadphonesIcon,
+  PauseIcon,
+  PlayIcon,
+  SpinnerIcon,
+} from "../components/Icons.jsx";
+import { useToast } from "../components/toast-context.js";
+import { formatTime } from "../utils/formatTime.js";
 import "../css/Studio.css";
 
 export default function Studio() {
   const location = useLocation();
   const navigate = useNavigate();
+  const showToast = useToast();
 
   const audioContextRef = useRef(null);
   const audioBuffersRef = useRef();
@@ -21,6 +33,7 @@ export default function Studio() {
   const playbackStartRef = useRef(0);
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const [duration, setDuration] = useState(0); // seconds, set once stems load
 
   const [stemGains, setStemGains] = useState(
     stemsData ? Array(stemsData.json.length).fill(1) : [],
@@ -37,6 +50,17 @@ export default function Studio() {
 
   const hasStartedRef = useRef(false);
   const seekOffsetRef = useRef(0);
+
+  // scrubbing - while the pointer is down only the playhead moves, seek once on release
+  const isScrubbingRef = useRef(false);
+  const scrubPctRef = useRef(0);
+  const scrubMovedRef = useRef(false);
+  const finishScrubRef = useRef(null); // always the latest finishScrub
+  // finish on the next tick: the browser fires a trailing "change" event after release,
+  // which must still count as part of the scrub or it causes a second seek
+  const onWindowPointerUpRef = useRef(() =>
+    setTimeout(() => finishScrubRef.current?.(), 0),
+  );
 
   useEffect(() => {
     if (stemsData !== null) {
@@ -63,6 +87,7 @@ export default function Studio() {
         }),
       );
       audioBuffersRef.current = buffers;
+      setDuration(buffers[0]?.duration ?? 0);
 
       setStemGains(Array(buffers.length).fill(1));
       setIsLoaded(true);
@@ -93,8 +118,10 @@ export default function Studio() {
         handleEnded();
         return;
       }
-      setTrackProgress((position / duration) * 100);
-    }, 250);
+      if (!isScrubbingRef.current) {
+        setTrackProgress((position / duration) * 100);
+      }
+    }, 50); // fast enough for the tenths in the timestamp to look smooth
   }
 
   function handleEnded() {
@@ -105,11 +132,19 @@ export default function Studio() {
     seekOffsetRef.current = 0;
   }
 
+  // play / skip / seek before the stems are ready -> small popup instead of an alert
+  function ensureLoaded() {
+    if (isLoaded) return true;
+    showToast(
+      stemsData
+        ? "Loading media. Please wait."
+        : "No song loaded. Open one from the queue.",
+    );
+    return false;
+  }
+
   function handlePlay() {
-    if (!isLoaded) {
-      alert("Loading media. Please wait.");
-      return;
-    }
+    if (!ensureLoaded()) return;
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext();
     }
@@ -146,14 +181,43 @@ export default function Studio() {
     }
   }
 
+  function handleSeekPointerDown() {
+    if (!ensureLoaded()) return;
+    isScrubbingRef.current = true;
+    scrubMovedRef.current = false;
+    // listen on window so letting go anywhere (even off the slider) ends the scrub
+    window.addEventListener("pointerup", onWindowPointerUpRef.current);
+    window.addEventListener("pointercancel", onWindowPointerUpRef.current);
+  }
+
   function handleSeek(e) {
     const pct = parseFloat(e.target.value);
+    if (isScrubbingRef.current) {
+      // just move the playhead, no audio seek yet
+      scrubPctRef.current = pct;
+      scrubMovedRef.current = true;
+      setTrackProgress(pct);
+      return;
+    }
+    // keyboard (arrow keys) - seek right away
+    if (!ensureLoaded()) return;
     seekTo((pct / 100) * audioBuffersRef.current[0].duration);
   }
 
+  function finishScrub() {
+    window.removeEventListener("pointerup", onWindowPointerUpRef.current);
+    window.removeEventListener("pointercancel", onWindowPointerUpRef.current);
+    if (!isScrubbingRef.current) return;
+    isScrubbingRef.current = false;
+    if (scrubMovedRef.current) {
+      seekTo((scrubPctRef.current / 100) * audioBuffersRef.current[0].duration);
+    }
+  }
+  finishScrubRef.current = finishScrub;
+
   // skip forward/back by seconds
   function handleSkip(seconds) {
-    if (!audioBuffersRef.current) return;
+    if (!ensureLoaded()) return;
     const duration = audioBuffersRef.current[0].duration;
     const current = (trackProgress / 100) * duration;
     seekTo(Math.min(Math.max(current + seconds, 0), duration));
@@ -245,11 +309,18 @@ export default function Studio() {
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
-        alert("Mix saved to server.");
+        showToast("Mix saved to server.", "success");
       }
       setShowExport(false);
     } catch (error) {
-      alert(error);
+      // server errors come back as {"detail": "..."}, show just the readable part
+      let message = error.message;
+      try {
+        message = JSON.parse(message).detail ?? message;
+      } catch {
+        // not JSON, use as is
+      }
+      showToast(`Export failed: ${message || "unknown error"}`, "error");
     } finally {
       setIsExporting(false);
     }
@@ -260,18 +331,56 @@ export default function Studio() {
     sessionStorage.setItem("practiceData", JSON.stringify(practiceData));
     navigate("/practice", { state: practiceData });
   }
+  // opened with nothing from the queue and nothing saved in this tab
+  if (!stemsData) {
+    return (
+      <div className="studio-page">
+        <div className="studio-empty">
+          <span className="studio-empty-title">No song loaded</span>
+          <p className="studio-empty-text">
+            Go to the Queue, pick a finished job and choose{" "}
+            <strong>Open In Studio</strong> to load its stems here.
+          </p>
+          <button
+            className="btn-primary studio-empty-btn"
+            onClick={() => navigate("/queue")}
+          >
+            Go to Queue
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="studio-page">
       <div className="studio-header">
-        <strong>
-          {stemsData?.fileName
-            ? stemsData.fileName.split(".")[0]
-            : "No Filename Found"}
-        </strong>
+        <div className="studio-header-info">
+          <strong>
+            {stemsData?.fileName
+              ? stemsData.fileName.split(".")[0]
+              : "No Filename Found"}
+          </strong>
+          <span className="studio-time">
+            {formatTime((trackProgress / 100) * duration)}
+            <span className="studio-time-total">
+              {" "}
+              / {formatTime(duration)}
+            </span>
+          </span>
+        </div>
 
         <div className="studio-header-btns">
-          <button onClick={handleOpenInPractice}>♩</button>
-          <button onClick={() => setShowExport(!showExport)}>⤓</button>
+          <button onClick={handleOpenInPractice} title="Open in practice">
+            <HeadphonesIcon />
+          </button>
+          <button
+            className={showExport ? "is-open" : ""}
+            onClick={() => setShowExport(!showExport)}
+            title="Export mix"
+          >
+            <DownloadIcon />
+          </button>
 
           {showExport && (
             <>
@@ -329,7 +438,7 @@ export default function Studio() {
                       isExporting
                     }
                   >
-                    {isExporting ? "◌" : "Export Mix"}
+                    {isExporting ? <SpinnerIcon /> : "Export Mix"}
                   </button>
                 </div>
               </div>
@@ -352,7 +461,9 @@ export default function Studio() {
               type="range"
               min={0}
               max={100}
+              step="any"
               value={trackProgress}
+              onPointerDown={handleSeekPointerDown}
               onChange={handleSeek}
             />
           </div>
@@ -387,15 +498,25 @@ export default function Studio() {
           </div>
         </div>
         <div className="transport-bar">
-          <button onClick={() => handleSkip(-10)}>⏮</button>
+          <button onClick={() => handleSkip(-10)} title="Back 10 seconds">
+            <Back10Icon />
+          </button>
           {!isLoaded ? (
-            <button onClick={handlePlay}>◌</button>
+            <button onClick={handlePlay}>
+              <SpinnerIcon />
+            </button>
           ) : !isPlaying ? (
-            <button onClick={handlePlay}>▶</button>
+            <button onClick={handlePlay}>
+              <PlayIcon />
+            </button>
           ) : (
-            <button onClick={handlePlay}>⏸</button>
+            <button onClick={handlePlay}>
+              <PauseIcon />
+            </button>
           )}
-          <button onClick={() => handleSkip(10)}>⏭</button>
+          <button onClick={() => handleSkip(10)} title="Forward 10 seconds">
+            <Forward10Icon />
+          </button>
         </div>
       </div>
     </div>

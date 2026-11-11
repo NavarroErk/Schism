@@ -1,6 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
+import {
+  Back10Icon,
+  CircleIcon,
+  Forward10Icon,
+  LineIcon,
+  PauseIcon,
+  PlayIcon,
+  SpinnerIcon,
+} from "../components/Icons.jsx";
+import { useToast } from "../components/toast-context.js";
+import { formatTime as formatClock } from "../utils/formatTime.js";
 import "../css/Practice.css";
 
 // circle geometry
@@ -11,6 +22,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function Practice() {
   const location = useLocation();
+  const showToast = useToast();
 
   const practiceData =
     location.state || JSON.parse(sessionStorage.getItem("practiceData"));
@@ -178,11 +190,19 @@ export default function Practice() {
     });
   }
 
+  // play / skip / seek before the stems are ready -> small popup instead of an alert
+  function ensureLoaded() {
+    if (isLoaded) return true;
+    showToast(
+      practiceData
+        ? "Loading media. Please wait."
+        : "No song loaded. Open one from the queue.",
+    );
+    return false;
+  }
+
   function handlePlay() {
-    if (!isLoaded) {
-      alert("Loading media. Please wait.");
-      return;
-    }
+    if (!ensureLoaded()) return;
 
     // pause
     if (isPlayingRef.current) {
@@ -235,7 +255,7 @@ export default function Practice() {
 
   // skip forward/back by seconds
   function handleSkip(seconds) {
-    if (!audioBuffersRef.current) return;
+    if (!ensureLoaded()) return;
     const current = pctToSeconds(trackProgress);
     seekTo(Math.min(Math.max(current + seconds, 0), getDuration()));
   }
@@ -255,7 +275,7 @@ export default function Practice() {
   }
 
   function handleScrubStart(e) {
-    if (!audioBuffersRef.current) return;
+    if (!ensureLoaded()) return;
     e.currentTarget.setPointerCapture(e.pointerId); // get moves even off the element
     isScrubbingRef.current = true;
     handleScrubMove(e);
@@ -340,11 +360,8 @@ export default function Practice() {
   }
 
   function formatTime(pct) {
-    if (!audioBuffersRef.current) return "0:00";
-    const seconds = pctToSeconds(pct);
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
+    if (!audioBuffersRef.current) return formatClock(0);
+    return formatClock(pctToSeconds(pct));
   }
 
   if (!window.isSecureContext) {
@@ -405,6 +422,7 @@ export default function Practice() {
         />
       )}
       <circle
+        className="seek-ring-track"
         cx={CENTER}
         cy={CENTER}
         r={RADIUS}
@@ -413,6 +431,7 @@ export default function Practice() {
         strokeWidth="12"
       />
       <circle
+        className="seek-ring-progress"
         cx={CENTER}
         cy={CENTER}
         r={RADIUS}
@@ -522,7 +541,9 @@ export default function Practice() {
 
   const speedControl = (
     <div className="speed-control">
-      <span>Speed: {Math.round(playbackRate * 100)}%</span>
+      <span className="speed-label">
+        Speed <strong>{Math.round(playbackRate * 100)}%</strong>
+      </span>
       <input
         type="range"
         min={0.5}
@@ -530,21 +551,32 @@ export default function Practice() {
         step={0.01}
         value={playbackRate}
         onChange={handlePlaybackRate}
+        style={{ "--fill": `${(playbackRate - 0.5) * 100}%` }}
       />
     </div>
   );
 
   const transport = (
     <div className="practice-transport">
-      <button onClick={() => handleSkip(-10)}>⏮</button>
+      <button onClick={() => handleSkip(-10)} title="Back 10 seconds">
+        <Back10Icon />
+      </button>
       {!isLoaded ? (
-        <button onClick={handlePlay}>◌</button>
+        <button onClick={handlePlay}>
+          <SpinnerIcon />
+        </button>
       ) : !isPlaying ? (
-        <button onClick={handlePlay}>▶</button>
+        <button onClick={handlePlay}>
+          <PlayIcon />
+        </button>
       ) : (
-        <button onClick={handlePlay}>⏸</button>
+        <button onClick={handlePlay}>
+          <PauseIcon />
+        </button>
       )}
-      <button onClick={() => handleSkip(10)}>⏭</button>
+      <button onClick={() => handleSkip(10)} title="Forward 10 seconds">
+        <Forward10Icon />
+      </button>
     </div>
   );
 
@@ -559,7 +591,7 @@ export default function Practice() {
             }
             title="Switch between circle and line"
           >
-            {seekMode === "circle" ? "—" : "◯"}
+            {seekMode === "circle" ? <LineIcon /> : <CircleIcon />}
           </button>
           {seekMode === "circle" ? circleView : lineView}
         </div>

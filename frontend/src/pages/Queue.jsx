@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import QueueItem from "../components/QueueItem";
+import { RefreshIcon } from "../components/Icons.jsx";
 import "../css/Queue.css";
 
 export default function Queue() {
@@ -39,26 +40,30 @@ export default function Queue() {
 
   return (
     <div className="queue-page">
-      <div className="job-queue-filters">
-        <p>Polling again in {displayPollingTimer} seconds</p>
-        <select name="" id="">
-          <option value=""></option>
-        </select>
+      <div className="queue-toolbar">
+        <h1 className="queue-title">
+          Queue
+          {jobsData && <span className="queue-count">{jobsData.length}</span>}
+        </h1>
+        <span className="queue-poll" title="Next refresh">
+          <RefreshIcon />
+          {displayPollingTimer}s
+        </span>
       </div>
       {jobsData && (
         <div className="job-queue">
+          {jobsData.length === 0 && (
+            <p className="queue-empty">No jobs yet.</p>
+          )}
           {jobsData.map((job, i) => (
-            <>
-              <QueueItem
-                job={job}
-                fetchJobsData={fetchJobsData}
-                key={i}
-              ></QueueItem>
-            </>
+            <QueueItem
+              job={job}
+              fetchJobsData={fetchJobsData}
+              key={job.job_id ?? i}
+            ></QueueItem>
           ))}
         </div>
       )}
-      {/* </div> */}
     </div>
   );
 }

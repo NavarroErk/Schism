@@ -9,9 +9,34 @@ import demucs.separate
 import os
 import re
 import logging
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 logger = logging.getLogger("uvicorn")
+
+
+def get_timezone():
+    """Timezone from the TZ env var (set in docker-compose.yml), e.g. "America/New_York".
+    No TZ -> the machine's local timezone. A TZ that isn't a real zone -> UTC."""
+    tz_name = os.environ.get("TZ")
+    if not tz_name:
+        return datetime.now().astimezone().tzinfo
+    try:
+        return ZoneInfo(tz_name)
+    except (ZoneInfoNotFoundError, ValueError):
+        logger.warning(f"Unknown TZ '{tz_name}', using UTC instead")
+        return timezone.utc
+
+
+def get_job_timestamp():
+    """Current time for a job's "date" field, e.g. "2026-11-10 14:05 EST"."""
+    now = datetime.now(get_timezone())
+    tz_label = now.strftime("%Z")
+    # Windows reports long names ("Eastern Standard Time"), shorten to "EST"
+    if " " in tz_label:
+        tz_label = "".join(word[0] for word in tz_label.split())
+    return f"{now.strftime('%Y-%m-%d %H:%M')} {tz_label}"
 
 MIX_SUFFIX = " - MIX"
 

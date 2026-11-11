@@ -1,0 +1,232 @@
+/* shared by Studio.jsx and Practice.jsx: faders + transport buttons */
+
+/* faders */
+
+.fader-channel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  min-width: 44px;
+}
+
+.fader-channel input[type="range"] {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 40px;
+  height: calc(100% - 28px);
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  touch-action: none;
+  cursor: grab;
+}
+
+.fader-channel input[type="range"]:active {
+  cursor: grabbing;
+}
+
+.fader-channel input[type="range"]:focus {
+  outline: none;
+}
+
+/* groove */
+.fader-channel input[type="range"]::-webkit-slider-runnable-track {
+  width: 6px;
+  background: #050505;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 0 1px #262626,
+    0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.fader-channel input[type="range"]::-moz-range-track {
+  block-size: 6px;
+  background: #050505;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px #262626;
+}
+
+.fader-channel input[type="range"]::-moz-range-progress {
+  background: transparent;
+}
+
+/* fader cap - dark body, grip lines, orange center line */
+.fader-channel input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 34px;
+  height: 20px;
+  margin-left: -14px;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  background:
+    linear-gradient(to bottom, transparent 8px, var(--accent) 8px, var(--accent) 10px, transparent 10px),
+    repeating-linear-gradient(to bottom, transparent 0 3px, rgba(0, 0, 0, 0.45) 3px 4px),
+    linear-gradient(to bottom, #474747, #2a2a2a 45%, #1c1c1c);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 3px 6px rgba(0, 0, 0, 0.7);
+  cursor: grab;
+}
+
+.fader-channel input[type="range"]::-moz-range-thumb {
+  width: 34px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  background:
+    linear-gradient(to bottom, transparent 8px, var(--accent) 8px, var(--accent) 10px, transparent 10px),
+    repeating-linear-gradient(to bottom, transparent 0 3px, rgba(0, 0, 0, 0.45) 3px 4px),
+    linear-gradient(to bottom, #474747, #2a2a2a 45%, #1c1c1c);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 3px 6px rgba(0, 0, 0, 0.7);
+  cursor: grab;
+}
+
+.fader-channel input[type="range"]:focus-visible::-webkit-slider-thumb {
+  border-color: var(--accent);
+}
+
+.fader-channel input[type="range"]:focus-visible::-moz-range-thumb {
+  border-color: var(--accent);
+}
+
+.fader-label {
+  flex-shrink: 0;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+/* master - set apart with a divider and an orange cap */
+
+.master-channel {
+  position: relative;
+  padding-left: 14px;
+}
+
+.master-channel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8%;
+  bottom: 8%;
+  width: 1px;
+  background: var(--border-strong);
+}
+
+.master-channel .fader-label {
+  color: var(--accent);
+}
+
+.master-channel input[type="range"]::-webkit-slider-thumb {
+  border-color: var(--accent-press);
+  background:
+    linear-gradient(to bottom, transparent 8px, #1a0c00 8px, #1a0c00 10px, transparent 10px),
+    repeating-linear-gradient(to bottom, transparent 0 3px, rgba(0, 0, 0, 0.18) 3px 4px),
+    linear-gradient(to bottom, #ffab5c, var(--accent) 50%, #d96d08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 3px 8px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(255, 138, 31, 0.25);
+}
+
+.master-channel input[type="range"]::-moz-range-thumb {
+  border-color: var(--accent-press);
+  background:
+    linear-gradient(to bottom, transparent 8px, #1a0c00 8px, #1a0c00 10px, transparent 10px),
+    repeating-linear-gradient(to bottom, transparent 0 3px, rgba(0, 0, 0, 0.18) 3px 4px),
+    linear-gradient(to bottom, #ffab5c, var(--accent) 50%, #d96d08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 3px 8px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(255, 138, 31, 0.25);
+}
+
+/* transport buttons - skip / play / skip */
+
+.transport-bar > button,
+.practice-transport > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: 54px;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-size: 1.45rem;
+}
+
+.transport-bar > button:hover:not(:disabled),
+.practice-transport > button:hover:not(:disabled) {
+  background: var(--surface-3);
+  border-color: #444;
+  color: var(--accent);
+}
+
+/* play / pause is always the middle button */
+.transport-bar > button:nth-child(2),
+.practice-transport > button:nth-child(2) {
+  height: 72px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-size: 1.7rem;
+  box-shadow:
+    0 6px 20px rgba(255, 138, 31, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.transport-bar > button:nth-child(2):hover:not(:disabled),
+.practice-transport > button:nth-child(2):hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: var(--on-accent);
+}
+
+.transport-bar > button:nth-child(2):active:not(:disabled),
+.practice-transport > button:nth-child(2):active:not(:disabled) {
+  background: var(--accent-press);
+}
+
+/* small square icon buttons (studio header, seek toggle) */
+
+.icon-btn,
+.studio-header-btns > button,
+.seek-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  font-size: 1.15rem;
+}
+
+.icon-btn:hover:not(:disabled),
+.studio-header-btns > button:hover:not(:disabled),
+.seek-toggle:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--surface-3);
+}
