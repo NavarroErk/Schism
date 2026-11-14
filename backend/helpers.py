@@ -5,8 +5,8 @@ import subprocess
 import tempfile
 import json
 import yt_dlp
-import demucs.separate
 import os
+import sys
 import re
 import logging
 from datetime import datetime, timezone
@@ -96,12 +96,14 @@ def run_demucs(job_id, output_format, demucs_model):
         job_directory = get_job_directory(job_id)
         file_to_split = get_demucs_input_file(job_directory)
 
-        if output_format == "wav":
-            demucs.separate.main(["-n", demucs_model, "-o", job_directory, file_to_split])
-        else:
-            demucs.separate.main(["-n", demucs_model, "-o", job_directory, f"--{output_format}", file_to_split])
+        # run demucs in its own process so its memory is fully freed when it finishes
+        args = [sys.executable, "-m", "demucs.separate", "-n", demucs_model, "-o", job_directory]
+        if output_format != "wav":
+            args.append(f"--{output_format}")
+        args.append(file_to_split)
+        subprocess.run(args, check=True, capture_output=True, text=True)
 
-        # move output files up one directory, delete directory, rename parent directory     
+        # move output files up one directory, delete directory, rename parent directory
         model_dir_path = os.path.join(job_directory, demucs_model)
         stems_dir_path = os.path.join(model_dir_path, os.listdir(model_dir_path)[0])
 
@@ -111,7 +113,11 @@ def run_demucs(job_id, output_format, demucs_model):
         os.rename(model_dir_path, os.path.join(job_directory, "output"))
 
         update_job_status(job_id, "Audio Split Success", None)
-    
+
+    except subprocess.CalledProcessError as e:
+        # show demucs' own error instead of "exit status 1"
+        update_job_status(job_id, "Demucs Failed", e.stderr[-500:])
+        raise
     except Exception as e:
         update_job_status(job_id, "Demucs Failed", str(e))
         raise
