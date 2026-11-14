@@ -14,6 +14,7 @@ import NoSongLoaded from "../components/NoSongLoaded.jsx";
 import { useToast } from "../components/toast-context.js";
 import { loadStems } from "../utils/stemCache.js";
 import { formatTime as formatClock } from "../utils/formatTime.js";
+import { removeExtension } from "../utils/fileName.js";
 import "../css/Practice.css";
 
 // circle geometry
@@ -506,7 +507,7 @@ export default function Practice() {
             value={stemGains[i]}
             onChange={(e) => handleStemGain(e, i)}
           />
-          <span className="fader-label">{stem.split(".")[0]}</span>
+          <span className="fader-label">{removeExtension(stem)}</span>
         </div>
       ))}
       <div className="fader-channel master-channel">

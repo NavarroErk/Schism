@@ -13,6 +13,7 @@ import NoSongLoaded from "../components/NoSongLoaded.jsx";
 import { useToast } from "../components/toast-context.js";
 import { loadStems } from "../utils/stemCache.js";
 import { formatTime } from "../utils/formatTime.js";
+import { removeExtension } from "../utils/fileName.js";
 import "../css/Studio.css";
 
 export default function Studio() {
@@ -299,7 +300,7 @@ export default function Studio() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `${stemsData.fileName.replace(/\.[^.]+$/, "")} - MIX.${exportFormat}`;
+        link.download = `${removeExtension(stemsData.fileName)} - MIX.${exportFormat}`;
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
@@ -341,7 +342,7 @@ export default function Studio() {
         <div className="studio-header-info">
           <strong>
             {stemsData?.fileName
-              ? stemsData.fileName.split(".")[0]
+              ? removeExtension(stemsData.fileName)
               : "No Filename Found"}
           </strong>
           <span className="studio-time">
@@ -434,10 +435,7 @@ export default function Studio() {
         {stemsData?.json.map((stem, i) => (
           <div className="stem-row" key={i}>
             <span className="stem-name">
-              {stem
-                .replace(".wav", "")
-                .replace(".mp3", "")
-                .replace(".flac", "")}
+              {removeExtension(stem)}
             </span>
             <input
               className="stem-progress"
@@ -465,7 +463,7 @@ export default function Studio() {
                 value={stemGains[i]}
                 onChange={(e) => handleStemGain(e, i)}
               />
-              <span className="fader-label">{stem.split(".")[0]}</span>
+              <span className="fader-label">{removeExtension(stem)}</span>
             </div>
           ))}
           <div className="fader-channel master-channel">

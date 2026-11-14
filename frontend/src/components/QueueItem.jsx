@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Marquee from "./Marquee.jsx";
+import { removeExtension } from "../utils/fileName.js";
 import { EditIcon, OpenIcon, RetryIcon, TrashIcon } from "./Icons.jsx";
 
 function QueueItem({ job, fetchJobsData }) {
@@ -114,7 +115,7 @@ function QueueItem({ job, fetchJobsData }) {
     }
   }
 
-  const title = job.file_name ? job.file_name.split(".")[0] : "Untitled";
+  const title = job.file_name ? removeExtension(job.file_name) : "Untitled";
   const isActive = isJobActive();
 
   return (
