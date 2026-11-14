@@ -191,7 +191,8 @@ function QueueItem({ job, fetchJobsData }) {
       </div>
 
       {isExpanded === true ? (
-        <dl className="queue-item-details">
+        // clicks in here (or the buttons) don't collapse the item
+        <dl className="queue-item-details" onClick={(e) => e.stopPropagation()}>
           <dt>URL</dt>
           <dd>
             <Marquee text={job.url || "—"} />
@@ -214,9 +215,12 @@ function QueueItem({ job, fetchJobsData }) {
       ) : (
         <></>
       )}
-      <div className={`job-item-buttons ${isActive ? "is-locked" : ""}`}>
+      <div
+        className={`job-item-buttons ${isActive ? "is-locked" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {terminalStatuses.includes(job.status) && job.status !== "Success" ? (
-          <button className="job-btn">
+          <button className="job-btn" onClick={(e) => e.stopPropagation()}>
             <RetryIcon />
             Retry
           </button>

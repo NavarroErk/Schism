@@ -254,6 +254,7 @@
 /* buttons */
 
 .job-item-buttons {
+  cursor: default;
   display: flex;
   gap: 6px;
   margin-top: 2px;
