@@ -294,6 +294,11 @@
   color: var(--accent);
 }
 
+/* Studio + Practice sit together on the right */
+.job-btn-primary + .job-btn-primary {
+  margin-left: 0;
+}
+
 .job-btn-primary:hover:not(:disabled) {
   background: var(--accent);
   border-color: var(--accent);
@@ -333,8 +338,8 @@
   }
 }
 
-@media (max-width: 360px) {
-  /* icon-only rename/delete on tiny screens */
+@media (max-width: 520px) {
+  /* icon-only rename/delete on phones so all four buttons fit */
   .job-btn:not(.job-btn-primary) {
     width: 34px;
     padding: 0;

@@ -9,6 +9,7 @@ import {
   PlayIcon,
   SpinnerIcon,
 } from "../components/Icons.jsx";
+import NoSongLoaded from "../components/NoSongLoaded.jsx";
 import { useToast } from "../components/toast-context.js";
 import { loadStems } from "../utils/stemCache.js";
 import { formatTime } from "../utils/formatTime.js";
@@ -25,7 +26,7 @@ export default function Studio() {
   const masterGainRef = useRef(null);
 
   const [stemsData, setStemsData] = useState(
-    location.state || JSON.parse(sessionStorage.getItem("studioData")),
+    location.state || JSON.parse(sessionStorage.getItem("songData")),
   );
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -320,27 +321,16 @@ export default function Studio() {
   }
 
   function handleOpenInPractice() {
-    const practiceData = { ...stemsData, stemGains, masterGain };
-    sessionStorage.setItem("practiceData", JSON.stringify(practiceData));
-    navigate("/practice", { state: practiceData });
+    // carry the fader levels over to practice
+    const songData = { ...stemsData, stemGains, masterGain };
+    sessionStorage.setItem("songData", JSON.stringify(songData));
+    navigate("/practice", { state: songData });
   }
   // opened with nothing from the queue and nothing saved in this tab
   if (!stemsData) {
     return (
       <div className="studio-page">
-        <div className="studio-empty">
-          <span className="studio-empty-title">No song loaded</span>
-          <p className="studio-empty-text">
-            Go to the Queue, pick a finished job and choose{" "}
-            <strong>Open In Studio</strong> to load its stems here.
-          </p>
-          <button
-            className="btn-primary studio-empty-btn"
-            onClick={() => navigate("/queue")}
-          >
-            Go to Queue
-          </button>
-        </div>
+        <NoSongLoaded />
       </div>
     );
   }

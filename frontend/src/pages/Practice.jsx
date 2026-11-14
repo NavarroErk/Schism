@@ -10,6 +10,7 @@ import {
   PlayIcon,
   SpinnerIcon,
 } from "../components/Icons.jsx";
+import NoSongLoaded from "../components/NoSongLoaded.jsx";
 import { useToast } from "../components/toast-context.js";
 import { loadStems } from "../utils/stemCache.js";
 import { formatTime as formatClock } from "../utils/formatTime.js";
@@ -26,7 +27,7 @@ export default function Practice() {
   const showToast = useToast();
 
   const practiceData =
-    location.state || JSON.parse(sessionStorage.getItem("practiceData"));
+    location.state || JSON.parse(sessionStorage.getItem("songData"));
   const initialGains =
     practiceData?.stemGains ||
     (practiceData ? Array(practiceData.json.length).fill(1) : []);
@@ -361,6 +362,15 @@ export default function Practice() {
     return (
       <div className="practice-page">
         <p>Practice mode requires HTTPS (or localhost).</p>
+      </div>
+    );
+  }
+
+  // nothing opened from the queue yet in this tab
+  if (!practiceData) {
+    return (
+      <div className="practice-page">
+        <NoSongLoaded />
       </div>
     );
   }

@@ -48,7 +48,8 @@ function QueueItem({ job, fetchJobsData }) {
     }
   }
 
-  async function handleOpenInStudio(jobId, e) {
+  // page is "studio" or "practice"
+  async function handleOpen(page, jobId, e) {
     e.stopPropagation();
 
     if (isJobActive() == true) {
@@ -60,13 +61,9 @@ function QueueItem({ job, fetchJobsData }) {
       const response = await fetch(`api/jobs/${jobId}/stem-file-names`);
       const json = await response.json();
       if (response.ok) {
-        sessionStorage.setItem(
-          "studioData",
-          JSON.stringify({ json, jobId, fileName: job.file_name }),
-        );
-        navigate("/studio", {
-          state: { json, jobId, fileName: job.file_name },
-        });
+        const songData = { json, jobId, fileName: job.file_name };
+        sessionStorage.setItem("songData", JSON.stringify(songData));
+        navigate(`/${page}`, { state: songData });
         // console.log(json);
       } else {
         console.log(json.detail);
@@ -189,9 +186,16 @@ function QueueItem({ job, fetchJobsData }) {
         </button>
         <button
           className="job-btn job-btn-primary"
-          onClick={(e) => handleOpenInStudio(job.job_id, e)}
+          onClick={(e) => handleOpen("studio", job.job_id, e)}
         >
-          Open In Studio
+          Studio
+          <OpenIcon />
+        </button>
+        <button
+          className="job-btn job-btn-primary"
+          onClick={(e) => handleOpen("practice", job.job_id, e)}
+        >
+          Practice
           <OpenIcon />
         </button>
       </div>

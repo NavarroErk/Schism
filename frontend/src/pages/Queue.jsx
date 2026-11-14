@@ -50,6 +50,8 @@ export default function Queue() {
           {displayPollingTimer}s
         </span>
       </div>
+      {/* null = no response yet (an empty list means there are no jobs) */}
+      {jobsData === null && <p className="queue-empty">Loading jobs…</p>}
       {jobsData && (
         <div className="job-queue">
           {jobsData.length === 0 && (
