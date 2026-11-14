@@ -10,6 +10,7 @@ import {
   SpinnerIcon,
 } from "../components/Icons.jsx";
 import { useToast } from "../components/toast-context.js";
+import { loadStems } from "../utils/stemCache.js";
 import { formatTime } from "../utils/formatTime.js";
 import "../css/Studio.css";
 
@@ -77,15 +78,7 @@ export default function Studio() {
       // stems feed into master gain before the speakers
       masterGainRef.current = audioContextRef.current.createGain();
       masterGainRef.current.connect(audioContextRef.current.destination);
-      const buffers = await Promise.all(
-        stemsData.json.map(async (fileName) => {
-          const response = await fetch(
-            `api/jobs/${stemsData.jobId}/stem/${fileName}`,
-          );
-          const arrayBuffer = await response.arrayBuffer();
-          return audioContextRef.current.decodeAudioData(arrayBuffer);
-        }),
-      );
+      const buffers = await loadStems(stemsData.jobId, stemsData.json);
       audioBuffersRef.current = buffers;
       setDuration(buffers[0]?.duration ?? 0);
 

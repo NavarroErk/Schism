@@ -11,6 +11,7 @@ import {
   SpinnerIcon,
 } from "../components/Icons.jsx";
 import { useToast } from "../components/toast-context.js";
+import { loadStems } from "../utils/stemCache.js";
 import { formatTime as formatClock } from "../utils/formatTime.js";
 import "../css/Practice.css";
 
@@ -84,15 +85,7 @@ export default function Practice() {
         await import("@soundtouchjs/audio-worklet/processor?url");
       SoundTouchNodeRef.current = SoundTouchNode;
       await SoundTouchNode.register(audioContextRef.current, processorUrl);
-      const buffers = await Promise.all(
-        practiceData.json.map(async (fileName) => {
-          const response = await fetch(
-            `api/jobs/${practiceData.jobId}/stem/${fileName}`,
-          );
-          const arrayBuffer = await response.arrayBuffer();
-          return audioContextRef.current.decodeAudioData(arrayBuffer);
-        }),
-      );
+      const buffers = await loadStems(practiceData.jobId, practiceData.json);
       audioBuffersRef.current = buffers;
       setIsLoaded(true);
       createNodes();
