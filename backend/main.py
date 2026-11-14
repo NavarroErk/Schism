@@ -11,7 +11,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 import shutil
-from helpers import check_dependencies, get_jobs_data, write_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, update_job_path, get_job_directory, get_stem_file_names, render_mix, get_job_timestamp
+from helpers import check_dependencies, get_jobs_data, write_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, update_job_path, get_job_directory, get_stem_file_names, render_mix, get_job_timestamp, rename_job, TERMINAL_STATUSES
 
 
 
@@ -20,8 +20,6 @@ from helpers import check_dependencies, get_jobs_data, write_jobs_data, process_
 async def lifespan(app:FastAPI):
     # startup logic
     jobs_data = get_jobs_data()
-
-    TERMINAL_STATUSES = ["Success", "YT-DLP Failed", "Demucs Failed", "Failed"]
 
     for job in jobs_data:
         print(job["status"])
@@ -190,6 +188,13 @@ def get_job_by_id(id: str):
         raise HTTPException(status_code=404, detail="Job not found")
     else:
         return job
+
+class RenameRequest(BaseModel):
+    name: str
+
+@app.patch("/api/jobs/{id}")
+def rename_job_by_id(id: str, request: RenameRequest):
+    return rename_job(id, request.name)
 
 @app.delete("/api/jobs/{id}")
 def delete_job_by_id(id:str):

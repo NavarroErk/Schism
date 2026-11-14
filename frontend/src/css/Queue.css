@@ -350,3 +350,24 @@
     font-size: 0.95rem;
   }
 }
+
+/* inline rename text box (replaces the title while renaming) */
+.queue-item-rename {
+  flex: 1;
+  min-width: 0;
+}
+
+.queue-item-rename input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  margin: -3px 0 -3px -8px;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 600;
+  outline: none;
+}

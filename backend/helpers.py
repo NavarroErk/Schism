@@ -39,6 +39,7 @@ def get_job_timestamp():
     return f"{now.strftime('%Y-%m-%d %H:%M')} {tz_label}"
 
 MIX_SUFFIX = " - MIX"
+TERMINAL_STATUSES = ["Success", "YT-DLP Failed", "Demucs Failed", "Failed"]
 
 
 def check_dependencies():
@@ -236,6 +237,46 @@ def render_mix(job_id, gains, output_format, save_to_server):
 
     logger.info(f"Mix exported to [{mix_path}] for job: {job_id}.")
     return mix_path
+
+
+def rename_job(job_id, new_name):
+    """Rename a finished job: its audio file, its folder and jobs.json."""
+    jobs_data = get_jobs_data()
+    job = next((j for j in jobs_data if j["job_id"] == job_id), None)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job["status"] not in TERMINAL_STATUSES:
+        raise HTTPException(status_code=409, detail="Unable to rename an active job")
+    if not job["path"] or not job["file_name"]:
+        raise HTTPException(status_code=400, detail="This job has no files to rename")
+    name = " ".join(sanitize_filename(new_name).split())  # also collapses double spaces
+    if not name:
+        raise HTTPException(status_code=400, detail="Name can't be empty")
+
+    extension = os.path.splitext(job["file_name"])[1]
+    old_dir = job["path"]
+    new_dir = os.path.join("jobs", f"{name} ({job_id[:5]})")
+    old_file = os.path.join(old_dir, job["file_name"])
+    new_file = os.path.join(old_dir, name + extension)
+
+    # rename the audio file, then the folder. if the folder fails, undo the file rename
+    try:
+        if os.path.exists(old_file):
+            os.rename(old_file, new_file)
+        try:
+            os.rename(old_dir, new_dir)
+        except OSError:
+            if os.path.exists(new_file):
+                os.rename(new_file, old_file)
+            raise
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"Rename failed: {e.strerror}")
+
+    job["file_name"] = name + extension
+    job["path"] = new_dir
+    write_jobs_data(jobs_data)
+    logger.info(f"Renamed job {job_id} to [{name}].")
+    return job
 
 
 def sanitize_filename(title):

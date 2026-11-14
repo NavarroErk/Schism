@@ -3,22 +3,53 @@ import { useNavigate } from "react-router-dom";
 import Marquee from "./Marquee.jsx";
 import { removeExtension } from "../utils/fileName.js";
 import { EditIcon, OpenIcon, RetryIcon, TrashIcon } from "./Icons.jsx";
+import { useToast } from "./toast-context.js";
 
 function QueueItem({ job, fetchJobsData }) {
   const navigate = useNavigate();
+  const showToast = useToast();
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const [newName, setNewName] = useState(null); // null = not renaming
 
-  async function handleRename(jobId, e) {
+  // Rename button: turn the title into a text box
+  function handleRename(e) {
     e.stopPropagation();
-
-    if (isJobActive() == true) {
-      alert("Unable to rename an active job");
+    if (isJobActive()) {
+      showToast("Unable to rename an active job");
       return;
     }
+    setNewName(title);
+  }
+
+  // Enter in the text box: save the new name
+  async function submitRename(e) {
+    e.preventDefault();
+    const name = newName.trim();
+    setNewName(null);
+    if (!name || name === title) return;
+
     try {
-      // prompt user to input name or bring up overlay.
-    } catch (error) {}
+      const response = await fetch(`/api/jobs/${job.job_id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.detail);
+
+      // if this song is open in Studio/Practice, update its saved name too
+      const song = JSON.parse(sessionStorage.getItem("songData"));
+      if (song?.jobId === job.job_id) {
+        sessionStorage.setItem(
+          "songData",
+          JSON.stringify({ ...song, fileName: json.file_name }),
+        );
+      }
+      fetchJobsData();
+    } catch (error) {
+      showToast(`Rename failed: ${error.message}`, "error");
+    }
   }
 
   async function handleDelete(jobId, e) {
@@ -125,7 +156,24 @@ function QueueItem({ job, fetchJobsData }) {
       className={getJobClassName()}
     >
       <div className="queue-item-filename-date-row">
-        <Marquee className="queue-item-title" text={title} />
+        {newName === null ? (
+          <Marquee className="queue-item-title" text={title} />
+        ) : (
+          // Enter saves, Escape or clicking away cancels
+          <form
+            className="queue-item-rename"
+            onSubmit={submitRename}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && setNewName(null)}
+              onBlur={() => setNewName(null)}
+            />
+          </form>
+        )}
         <span className="queue-item-date">{job.date}</span>
       </div>
 
@@ -173,7 +221,7 @@ function QueueItem({ job, fetchJobsData }) {
             Retry
           </button>
         ) : (
-          <button className="job-btn" onClick={(e) => handleRename(123, e)}>
+          <button className="job-btn" onClick={handleRename}>
             <EditIcon />
             Rename
           </button>
