@@ -1,5 +1,6 @@
 services:
   app:
+    container_name: schism
     image: ghcr.io/navarroerk/schism:latest
     ports:
       - "8212:8212"
