@@ -360,25 +360,11 @@
     width: 100%;
   }
 
+  /* faders take whatever is left above the transport panel (controls.css) */
   .controls-section > .fader-panel {
-    height: 65%;
+    flex: 1;
+    min-height: 0;
     padding: 10px 6px;
-  }
-
-  .controls-section > .transport-bar {
-    height: 35%;
-    padding: 6px;
-    gap: 24px;
-  }
-
-  .transport-bar > button {
-    height: min(52px, 80%);
-    font-size: 1.35rem;
-  }
-
-  .transport-bar > button:nth-child(2) {
-    height: min(68px, 100%);
-    font-size: 1.6rem;
   }
 
   .export-popup {

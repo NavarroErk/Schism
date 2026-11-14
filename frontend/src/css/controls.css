@@ -205,6 +205,36 @@
   background: var(--accent-press);
 }
 
+/* mobile: the same fixed transport panel on Studio and Practice,
+   so switching pages doesn't move or resize it */
+@media (max-width: 600px), (orientation: portrait) {
+  .controls-section > .transport-bar,
+  .mobile-bottom > .practice-transport {
+    flex-shrink: 0;
+    height: 96px;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .controls-section > .transport-bar > button,
+  .mobile-bottom > .practice-transport > button {
+    height: 52px;
+    font-size: 1.35rem;
+  }
+
+  .controls-section > .transport-bar > button:nth-child(2),
+  .mobile-bottom > .practice-transport > button:nth-child(2) {
+    height: 68px;
+    font-size: 1.6rem;
+  }
+}
+
 /* small square icon buttons (studio header, seek toggle) */
 
 .icon-btn,
