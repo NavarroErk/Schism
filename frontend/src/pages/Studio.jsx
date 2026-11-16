@@ -89,7 +89,7 @@ export default function Studio() {
       createNodes();
     } catch (error) {
       if (error.name === "AbortError") return;
-      else showToast("Unable to load the stems for this audio");
+      else showToast("Unable to load the stems for this audio", "error");
     }
   }
 

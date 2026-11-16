@@ -93,14 +93,14 @@ export default function Home() {
         });
         // console.log(response);
         if (response.ok) {
+          showToast("Added job to queue", "success");
           navigate("/queue");
         } else {
           const error = await response.json();
-          // console.log(error.detail);
-          showToast("Job failed.", "error");
+          showToast("Unable to add job", "error");
         }
       } catch (error) {
-        showToast("Server could not be reached.", "error");
+        showToast("Server could not be reached", "error");
       } finally {
         setIsSubmitting(false);
       }
@@ -116,14 +116,14 @@ export default function Home() {
           method: "POST",
           body: formData,
         });
-        // console.log("URL:", await response.json());
         if (response.ok) {
+          showToast("Added job to queue", "success");
           navigate("/queue");
         } else {
-          showToast("Job failed.", "error");
+          showToast("Job failed", "error");
         }
       } catch (error) {
-        showToast("Server could not be reached.", "error");
+        showToast("Server could not be reached", "error");
       } finally {
         setIsSubmitting(false);
       }

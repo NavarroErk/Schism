@@ -11,6 +11,7 @@ import re
 import logging
 import queue
 import threading
+import uuid
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -324,6 +325,23 @@ def _rename_job(job_id, new_name):
     write_jobs_data(jobs_data)
     logger.info(f"Renamed job {job_id} to [{name}].")
     return job
+
+
+def get_compressed_stem(stem_path):
+    """Smaller MP3 copy of a stem, only for playback in the browser.
+    Made once in the job's preview/ folder and reused. Exports never use it."""
+    if stem_path.lower().endswith(".mp3"):
+        return stem_path  # already small
+    job_dir = os.path.dirname(os.path.dirname(stem_path))  # .../Job (id)/output/bass.wav -> .../Job (id)
+    preview_path = os.path.join(job_dir, "preview", os.path.splitext(os.path.basename(stem_path))[0] + ".mp3")
+    if not os.path.exists(preview_path):
+        os.makedirs(os.path.dirname(preview_path), exist_ok=True)
+        # write to a temp name first, so a half written file is never served
+        temp_path = f"{preview_path}.{uuid.uuid4().hex}.mp3"
+        subprocess.run(["ffmpeg", "-y", "-i", stem_path, "-c:a", "libmp3lame", "-b:a", "192k", temp_path],
+                       check=True, capture_output=True)
+        os.replace(temp_path, preview_path)
+    return preview_path
 
 
 def sanitize_filename(title):

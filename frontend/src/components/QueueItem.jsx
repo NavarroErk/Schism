@@ -30,6 +30,7 @@ function QueueItem({ job, fetchJobsData }) {
         method: "POST",
       });
       if (!response.ok) throw new Error((await response.json()).detail);
+      showToast("Retrying job", "success");
       fetchJobsData();
     } catch (error) {
       showToast(`Retry failed: ${error.message}`, "error");
@@ -60,6 +61,7 @@ function QueueItem({ job, fetchJobsData }) {
           JSON.stringify({ ...song, fileName: json.file_name }),
         );
       }
+      showToast("Job renamed", "success");
       fetchJobsData();
     } catch (error) {
       showToast(`Rename failed: ${error.message}`, "error");
@@ -68,7 +70,6 @@ function QueueItem({ job, fetchJobsData }) {
 
   async function handleDelete(jobId, e) {
     // if job was file job, path exists. delete path then delete entry from json
-
     e.stopPropagation();
 
     if (isJobActive() == true) {
@@ -83,14 +84,13 @@ function QueueItem({ job, fetchJobsData }) {
       });
       const json = await response.json();
       if (response.ok) {
+        showToast("Job deleted", "success");
         fetchJobsData();
-        // console.log(json);
       } else {
-        // console.log(json.detail);
+        showToast(`Unable to delete job: ${json.detail}`, "error");
       }
     } catch (error) {
-      // do something to update UI here
-      console.log("Server could not be reached", error);
+      showToast(`Unable to delete job: ${error.message}`, "error");
     }
   }
 
@@ -112,9 +112,11 @@ function QueueItem({ job, fetchJobsData }) {
         navigate(`/${page}`, { state: songData });
         // console.log(json);
       } else {
+        showToast("Unable to open job", "error");
         console.log(json.detail);
       }
     } catch (error) {
+      showToast("Unable to open job", "error");
       console.error("Error fetching data:", error);
     }
   }

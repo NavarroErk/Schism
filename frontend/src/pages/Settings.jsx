@@ -1,9 +1,19 @@
 import { useState, useEffect } from "react";
+import {
+  getCompressedPlayback,
+  setCompressedPlayback,
+} from "../utils/settings.js";
 import "../css/Settings.css";
 
 export default function Settings() {
   const [dependencyStatus, setDependencyStatus] = useState(null);
   const [isUnreachable, setIsUnreachable] = useState(false);
+  const [isCompressed, setIsCompressed] = useState(getCompressedPlayback());
+
+  function toggleCompressed() {
+    setCompressedPlayback(!isCompressed);
+    setIsCompressed(!isCompressed);
+  }
 
   useEffect(() => {
     async function fetchDependencyStatus() {
@@ -22,6 +32,22 @@ export default function Settings() {
   return (
     <div className="settings-page">
       <h1 className="settings-title">Settings</h1>
+
+      <section className="setting">
+        <div className="setting-row">
+          <span className="setting-title">Compressed playback</span>
+          <button
+            className="switch"
+            role="switch"
+            aria-checked={isCompressed}
+            onClick={toggleCompressed}
+          />
+        </div>
+        <p className="setting-info">
+          Faster loading in Studio and Practice. Exports still use the
+          original stems.
+        </p>
+      </section>
 
       {/* Tool	Windows	macOS	Linux
       ffmpeg | winget install Gyan.FFmpeg |	brew install ffmpeg |	sudo apt install ffmpeg*/}

@@ -11,7 +11,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 import shutil
-from helpers import check_dependencies, get_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, get_job_directory, get_stem_file_names, render_mix, get_job_timestamp, rename_job, TERMINAL_STATUSES, get_demucs_input_file, job_queue, start_job_worker, add_job, remove_job
+from helpers import check_dependencies, get_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, get_job_directory, get_stem_file_names, render_mix, get_job_timestamp, rename_job, TERMINAL_STATUSES, get_demucs_input_file, get_compressed_stem, job_queue, start_job_worker, add_job, remove_job
 
 
 @asynccontextmanager
@@ -120,12 +120,12 @@ def get_stem_paths_by_id(id: str):
     return get_stem_file_names(id)
 
 @app.get("/api/jobs/{id}/stem/{stemFileName}")
-def get_stem_file(id: str, stemFileName: str):
-    path_to_stem = os.path.join(get_job_directory(id), "output")
-
-    print(f"\n\n\n\nReceived id: {id}\n\nFile name: {stemFileName}")
-
-    return FileResponse(os.path.join(path_to_stem, stemFileName))
+def get_stem_file(id: str, stemFileName: str, compressed: bool = False):
+    stem_path = os.path.join(get_job_directory(id), "output", stemFileName)
+    # compressed = smaller copy for faster loading in Studio/Practice (export always uses the originals)
+    if compressed:
+        stem_path = get_compressed_stem(stem_path)
+    return FileResponse(stem_path)
 
         
 
