@@ -93,6 +93,7 @@ export default function Practice() {
       createNodes();
     } catch (error) {
       if (error.name === "AbortError") return;
+      else showToast("Unable to load the stems for this audio");
     }
   }
 

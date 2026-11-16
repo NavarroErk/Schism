@@ -72,7 +72,7 @@ function QueueItem({ job, fetchJobsData }) {
     e.stopPropagation();
 
     if (isJobActive() == true) {
-      alert("Unable to delete an active job");
+      showToast("Unable to delete an active job");
       return;
     }
 
@@ -99,7 +99,7 @@ function QueueItem({ job, fetchJobsData }) {
     e.stopPropagation();
 
     if (isJobActive() == true) {
-      alert("Unable to modify an active job");
+      showToast("Unable to open an active job");
       return;
     }
 

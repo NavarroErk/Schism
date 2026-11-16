@@ -67,12 +67,12 @@ export default function Studio() {
 
   useEffect(() => {
     if (stemsData !== null) {
-      getStemFile();
+      getStemFiles();
     }
     return () => stopAudio();
   }, []);
 
-  async function getStemFile() {
+  async function getStemFiles() {
     try {
       if (!audioContextRef.current) {
         audioContextRef.current = new AudioContext();
@@ -87,9 +87,9 @@ export default function Studio() {
       setStemGains(Array(buffers.length).fill(1));
       setIsLoaded(true);
       createNodes();
-      console.log("getStemFiles success");
     } catch (error) {
       if (error.name === "AbortError") return;
+      else showToast("Unable to load the stems for this audio");
     }
   }
 
@@ -347,10 +347,7 @@ export default function Studio() {
           </strong>
           <span className="studio-time">
             {formatTime((trackProgress / 100) * duration)}
-            <span className="studio-time-total">
-              {" "}
-              / {formatTime(duration)}
-            </span>
+            <span className="studio-time-total"> / {formatTime(duration)}</span>
           </span>
         </div>
 
@@ -434,9 +431,7 @@ export default function Studio() {
       <div className="stems-panel">
         {stemsData?.json.map((stem, i) => (
           <div className="stem-row" key={i}>
-            <span className="stem-name">
-              {removeExtension(stem)}
-            </span>
+            <span className="stem-name">{removeExtension(stem)}</span>
             <input
               className="stem-progress"
               type="range"
