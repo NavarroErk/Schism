@@ -22,6 +22,20 @@ function QueueItem({ job, fetchJobsData }) {
     setNewName(title);
   }
 
+  // rerun a failed job in place
+  async function handleRetry(e) {
+    e.stopPropagation();
+    try {
+      const response = await fetch(`/api/jobs/${job.job_id}/retry`, {
+        method: "POST",
+      });
+      if (!response.ok) throw new Error((await response.json()).detail);
+      fetchJobsData();
+    } catch (error) {
+      showToast(`Retry failed: ${error.message}`, "error");
+    }
+  }
+
   // Enter in the text box: save the new name
   async function submitRename(e) {
     e.preventDefault();
@@ -220,7 +234,7 @@ function QueueItem({ job, fetchJobsData }) {
         onClick={(e) => e.stopPropagation()}
       >
         {terminalStatuses.includes(job.status) && job.status !== "Success" ? (
-          <button className="job-btn" onClick={(e) => e.stopPropagation()}>
+          <button className="job-btn" onClick={handleRetry}>
             <RetryIcon />
             Retry
           </button>

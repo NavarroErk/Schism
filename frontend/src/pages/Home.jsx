@@ -202,7 +202,11 @@ export default function Home() {
           </TabPanel>
         </Tabs>
 
-        <div className="home-option" role="radiogroup" aria-label="Output format">
+        <div
+          className="home-option"
+          role="radiogroup"
+          aria-label="Output format"
+        >
           <span className="field-label">Output format</span>
           <div className="choice-group">
             {OUTPUT_FORMATS.map((format) => (
@@ -219,7 +223,11 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="home-option" role="radiogroup" aria-label="Demucs model">
+        <div
+          className="home-option"
+          role="radiogroup"
+          aria-label="Demucs model"
+        >
           <span className="field-label">Demucs model</span>
           <span className="model-description" aria-live="polite">
             {modelDescription ?? "Pick a model"}

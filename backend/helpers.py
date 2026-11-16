@@ -134,9 +134,9 @@ def get_job_directory(job_id):
 
 def get_demucs_input_file(job_directory):
     logger.info(os.listdir(job_directory))
-    supported_types = (".wav", ".flac", ".mp3")
+    supported_types = (".wav", ".flac", ".mp3", ".m4a")
     for file in os.listdir(job_directory):
-        if file.endswith(supported_types):
+        if file.lower().endswith(supported_types):
             return os.path.join(job_directory, file)
     raise FileNotFoundError("No supported audio file found")
 

@@ -11,7 +11,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 import shutil
-from helpers import check_dependencies, get_jobs_data, write_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, update_job_path, get_job_directory, get_stem_file_names, render_mix, get_job_timestamp, rename_job, TERMINAL_STATUSES
+from helpers import check_dependencies, get_jobs_data, write_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, update_job_path, get_job_directory, get_stem_file_names, render_mix, get_job_timestamp, rename_job, TERMINAL_STATUSES, get_demucs_input_file
 
 
 
@@ -195,6 +195,32 @@ class RenameRequest(BaseModel):
 @app.patch("/api/jobs/{id}")
 def rename_job_by_id(id: str, request: RenameRequest):
     return rename_job(id, request.name)
+
+@app.post("/api/jobs/{id}/retry")
+def retry_job(id: str, background_tasks: BackgroundTasks):
+    job = find_job_by_id(id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    # stops a double click from starting two runs of the same job
+    if job["status"] not in ["YT-DLP Failed", "Demucs Failed", "Failed"]:
+        raise HTTPException(status_code=409, detail="Only failed jobs can be retried")
+    # check the audio is still on disk before starting (also catches a missing folder)
+    if job["path"]:
+        try:
+            get_demucs_input_file(job["path"])
+        except FileNotFoundError:
+            raise HTTPException(status_code=400, detail="Audio file is missing. Delete this job and start a new one")
+
+    update_job_status(id, "Starting job.")  # also clears the error
+
+    # path is only set once the audio is on disk (uploaded, or downloaded by yt-dlp)
+    if job["path"]:
+        # remove a half finished demucs folder, if there is one
+        shutil.rmtree(os.path.join(job["path"], job["demucs_model"]), ignore_errors=True)
+        background_tasks.add_task(process_file_job, id, job["output_format"], job["demucs_model"])
+    else:
+        background_tasks.add_task(process_url_job, id, job["url"], job["output_format"], job["demucs_model"])
+    return f"Retrying job: {id}"
 
 @app.delete("/api/jobs/{id}")
 def delete_job_by_id(id:str):
