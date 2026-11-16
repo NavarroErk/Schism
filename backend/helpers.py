@@ -9,6 +9,8 @@ import os
 import sys
 import re
 import logging
+import queue
+import threading
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -40,6 +42,29 @@ def get_job_timestamp():
 
 MIX_SUFFIX = " - MIX"
 TERMINAL_STATUSES = ["Success", "YT-DLP Failed", "Demucs Failed", "Failed"]
+
+# only one thread at a time may read or write jobs.json.
+# RLock so a function holding it can call another function that also takes it
+jobs_lock = threading.RLock()
+
+# jobs wait here and run one at a time, in the order they were added
+job_queue = queue.Queue()
+
+
+def job_worker():
+    while True:
+        func, args = job_queue.get()  # waits until a job is added
+        try:
+            if find_job_by_id(args[0]) is not None:  # skip jobs deleted while queued
+                func(*args)
+        except Exception:
+            logger.exception("Job failed")  # the job already marked itself failed, keep going
+        finally:
+            job_queue.task_done()
+
+
+def start_job_worker():
+    threading.Thread(target=job_worker, daemon=True).start()
 
 
 def check_dependencies():
@@ -141,52 +166,69 @@ def get_demucs_input_file(job_directory):
     raise FileNotFoundError("No supported audio file found")
 
 def get_jobs_data():
-    os.makedirs("jobs", exist_ok=True)
-    if not os.path.exists("jobs/jobs.json"):
-        with open("jobs/jobs.json", "w") as f:
-            json.dump([], f)
-    try:
-        with open("jobs/jobs.json", "r") as jobs_json:
-            jobs_data = json.load(jobs_json)
-    except json.JSONDecodeError:
-        logger.warning("jobs.json was malformed and has been reset to empty. Orphaned jobs remain on disk.")
-        jobs_data = []
-        with open("jobs/jobs.json", "w") as f:
-            json.dump([], f)
-    return jobs_data
+    with jobs_lock:
+        os.makedirs("jobs", exist_ok=True)
+        if not os.path.exists("jobs/jobs.json"):
+            with open("jobs/jobs.json", "w") as f:
+                json.dump([], f)
+        try:
+            with open("jobs/jobs.json", "r") as jobs_json:
+                return json.load(jobs_json)
+        except json.JSONDecodeError:
+            # keep the broken file so it can be recovered, then start fresh
+            backup = f"jobs/jobs.json.bad-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+            os.replace("jobs/jobs.json", backup)
+            logger.warning(f"jobs.json was malformed. Saved it as {backup} and started a new one.")
+            with open("jobs/jobs.json", "w") as f:
+                json.dump([], f)
+            return []
 
 def write_jobs_data(jobs_data):
-    #! handle case where there is no jobs.json
-    with open("jobs/jobs.json", "w") as jobs_json:
-        json.dump(jobs_data, jobs_json, indent=2)
+    with jobs_lock:
+        with open("jobs/jobs.json", "w") as jobs_json:
+            json.dump(jobs_data, jobs_json, indent=2)
+
+def add_job(new_job):
+    with jobs_lock:
+        jobs_data = get_jobs_data()
+        jobs_data.append(new_job)
+        write_jobs_data(jobs_data)
+
+def remove_job(job_id):
+    with jobs_lock:
+        jobs_data = get_jobs_data()
+        write_jobs_data([job for job in jobs_data if job["job_id"] != job_id])
 
 def update_job_file_name(job_id, file_name):
-    jobs_data = get_jobs_data()
-    for job in jobs_data:
-        if job["job_id"] == job_id:
-            job["file_name"] = file_name
-            logger.info(f"File name updated to [{file_name}] for job: {job_id}.")
-            break
-    write_jobs_data(jobs_data)
+    with jobs_lock:
+        jobs_data = get_jobs_data()
+        for job in jobs_data:
+            if job["job_id"] == job_id:
+                job["file_name"] = file_name
+                logger.info(f"File name updated to [{file_name}] for job: {job_id}.")
+                break
+        write_jobs_data(jobs_data)
 
 def update_job_path(job_id, path):
-    jobs_data = get_jobs_data()
-    for job in jobs_data:
-        if job["job_id"] == job_id:
-            job["path"] = path
-            logger.info(f"Path updated to [{path}] for job: {job_id}.")
-            break
-    write_jobs_data(jobs_data)
+    with jobs_lock:
+        jobs_data = get_jobs_data()
+        for job in jobs_data:
+            if job["job_id"] == job_id:
+                job["path"] = path
+                logger.info(f"Path updated to [{path}] for job: {job_id}.")
+                break
+        write_jobs_data(jobs_data)
 
 def update_job_status(job_id, status, error = None):
-    jobs_data = get_jobs_data()
-    for job in jobs_data:
-        if job["job_id"] == job_id:
-            job["status"] = status
-            job["error"] = error
-            logger.info(f"Status updated to [{status}] for job: {job_id}. Error: {error}.")
-            break
-    write_jobs_data(jobs_data)
+    with jobs_lock:
+        jobs_data = get_jobs_data()
+        for job in jobs_data:
+            if job["job_id"] == job_id:
+                job["status"] = status
+                job["error"] = error
+                logger.info(f"Status updated to [{status}] for job: {job_id}. Error: {error}.")
+                break
+        write_jobs_data(jobs_data)
 
 
 
@@ -241,6 +283,11 @@ def render_mix(job_id, gains, output_format, save_to_server):
 
 def rename_job(job_id, new_name):
     """Rename a finished job: its audio file, its folder and jobs.json."""
+    with jobs_lock:
+        return _rename_job(job_id, new_name)
+
+
+def _rename_job(job_id, new_name):
     jobs_data = get_jobs_data()
     job = next((j for j in jobs_data if j["job_id"] == job_id), None)
     if job is None:

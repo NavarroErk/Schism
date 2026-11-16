@@ -11,21 +11,19 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 import shutil
-from helpers import check_dependencies, get_jobs_data, write_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, update_job_path, get_job_directory, get_stem_file_names, render_mix, get_job_timestamp, rename_job, TERMINAL_STATUSES, get_demucs_input_file
+from helpers import check_dependencies, get_jobs_data, process_url_job, process_file_job, update_job_status, find_job_by_id, sanitize_filename, get_job_directory, get_stem_file_names, render_mix, get_job_timestamp, rename_job, TERMINAL_STATUSES, get_demucs_input_file, job_queue, start_job_worker, add_job, remove_job
 
 
-
-# on server start, any job still running should be set to status = failed
 @asynccontextmanager
 async def lifespan(app:FastAPI):
     # startup logic
     jobs_data = get_jobs_data()
 
     for job in jobs_data:
-        print(job["status"])
         if job["status"] not in TERMINAL_STATUSES:
             update_job_status(job["job_id"], "Failed", "Server restarted unexpectedly")
-            
+
+    start_job_worker()  # runs queued jobs one at a time for the life of the server
     yield
     # shutdown logic (as necessary)
 
@@ -53,9 +51,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#! on server start, check for ffmpeg (alert user if not installed)
-
-
 @app.get("/api/health")
 def health():
     return {"status": "ok", "dependencies": check_dependencies()}
@@ -67,8 +62,7 @@ class URLJobRequest(BaseModel):
     demucs_model: Literal["htdemucs", "htdemucs_ft", "htdemucs_6s"]
 
 @app.post("/api/jobs/url")
-def post_url_job(request: URLJobRequest, background_tasks: BackgroundTasks):
-    jobs_data = get_jobs_data()
+def post_url_job(request: URLJobRequest):
     job_id = str(uuid.uuid4())
 
     new_job = {
@@ -79,29 +73,22 @@ def post_url_job(request: URLJobRequest, background_tasks: BackgroundTasks):
         "date": get_job_timestamp(),
         "output_format": request.output_format,
         "demucs_model": request.demucs_model,
-        "status": "Starting job.",
+        "status": "Queued",
         "error": None
     }
+    add_job(new_job)
 
-    # create and write new job to jobs_data
-    jobs_data.append(new_job)
-    write_jobs_data(jobs_data)
-    
-    # update_job_status(job_id, "Job Created", None)
-
-    # run task in background
-    background_tasks.add_task(process_url_job,job_id, request.url, request.output_format, request.demucs_model)
+    # get in line, the worker runs it when it's this job's turn
+    job_queue.put((process_url_job, (job_id, request.url, request.output_format, request.demucs_model)))
     return f"Job Created: {job_id}"
 
   
 @app.post("/api/jobs/file")
 async def post_file_job(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     output_format: Literal["wav", "flac", "mp3"] = Form(...),
     demucs_model: Literal["htdemucs", "htdemucs_ft", "htdemucs_6s"] = Form(...),
 ):
-    jobs_data = get_jobs_data()
     job_id = str(uuid.uuid4())
 
     name = sanitize_filename(os.path.splitext(file.filename or "upload")[0])
@@ -111,11 +98,11 @@ async def post_file_job(
         "job_id": job_id,
         "url": "N/A",
         "file_name": file.filename,
-        "path": None,
+        "path": os.path.join("jobs", f"{name} ({job_id[:5]})"),
         "date": get_job_timestamp(),
         "output_format": output_format,
         "demucs_model": demucs_model,
-        "status": "Starting job.",
+        "status": "Queued",
         "error": None
     }
 
@@ -124,12 +111,8 @@ async def post_file_job(
         content = await file.read()
         f.write(content)
 
-    # create and write new job to jobs_data
-    jobs_data.append(new_job)
-    write_jobs_data(jobs_data)
-    update_job_path(job_id, os.path.join("jobs", f"{name} ({job_id[:5]})"))
-
-    background_tasks.add_task(process_file_job,job_id, output_format, demucs_model)
+    add_job(new_job)
+    job_queue.put((process_file_job, (job_id, output_format, demucs_model)))
     return f"Job Created: {job_id}"
 
 @app.get("/api/jobs/{id}/stem-file-names")
@@ -197,7 +180,7 @@ def rename_job_by_id(id: str, request: RenameRequest):
     return rename_job(id, request.name)
 
 @app.post("/api/jobs/{id}/retry")
-def retry_job(id: str, background_tasks: BackgroundTasks):
+def retry_job(id: str):
     job = find_job_by_id(id)
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -211,45 +194,30 @@ def retry_job(id: str, background_tasks: BackgroundTasks):
         except FileNotFoundError:
             raise HTTPException(status_code=400, detail="Audio file is missing. Delete this job and start a new one")
 
-    update_job_status(id, "Starting job.")  # also clears the error
+    update_job_status(id, "Queued")  # also clears the error
 
     # path is only set once the audio is on disk (uploaded, or downloaded by yt-dlp)
     if job["path"]:
         # remove a half finished demucs folder, if there is one
         shutil.rmtree(os.path.join(job["path"], job["demucs_model"]), ignore_errors=True)
-        background_tasks.add_task(process_file_job, id, job["output_format"], job["demucs_model"])
+        job_queue.put((process_file_job, (id, job["output_format"], job["demucs_model"])))
     else:
-        background_tasks.add_task(process_url_job, id, job["url"], job["output_format"], job["demucs_model"])
+        job_queue.put((process_url_job, (id, job["url"], job["output_format"], job["demucs_model"])))
     return f"Retrying job: {id}"
 
 @app.delete("/api/jobs/{id}")
 def delete_job_by_id(id:str):
     #! Handle deletion of active job
     job = find_job_by_id(id)
-    if job is None:    
+    if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
-    # null check and 
-    elif job["path"] is not None and os.path.exists(job["path"]):
-        path = job["path"]
-
+    if job["path"] is not None and os.path.exists(job["path"]):
         try:
-            shutil.rmtree(path)
-            jobs_data = get_jobs_data()
-            # remove job by id from jobs_data
-            jobs_data = [job for job in jobs_data if job["job_id"] != id]
-            write_jobs_data(jobs_data)
-            return f"Removed Job with ID: {id}" 
-
+            shutil.rmtree(job["path"])
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to delete directory: {str(e)}")
-
-        # return f'Job exists at path: [{path}]'
-    else:
-        jobs_data = get_jobs_data()
-        # remove job by id from jobs_data
-        jobs_data = [job for job in jobs_data if job["job_id"] != id]
-        write_jobs_data(jobs_data)
-        return f"Removed Job with ID: {id}"
+    remove_job(id)
+    return f"Removed Job with ID: {id}"
 
 
 
