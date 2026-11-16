@@ -128,7 +128,9 @@ def run_demucs(job_id, output_format, demucs_model):
         if output_format != "wav":
             args.append(f"--{output_format}")
         args.append(file_to_split)
-        subprocess.run(args, check=True, capture_output=True, text=True)
+        # force utf-8 so filenames like "⧸" don't crash demucs on Windows (default there is cp1252)
+        subprocess.run(args, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       env={**os.environ, "PYTHONIOENCODING": "utf-8"})
 
         # move output files up one directory, delete directory, rename parent directory
         model_dir_path = os.path.join(job_directory, demucs_model)

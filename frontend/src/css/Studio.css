@@ -226,6 +226,7 @@
 }
 
 .stem-progress {
+  touch-action: none; /* drags belong to the slider, so the browser doesn't cancel the scrub to scroll */
   flex: 1;
   min-width: 0;
   height: var(--lane-h);

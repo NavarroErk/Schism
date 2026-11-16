@@ -22,6 +22,7 @@ export function loadStems(jobId, fileNames) {
       const response = await fetch(
         `/api/jobs/${jobId}/stem/${fileName}?compressed=${compressed}`,
       );
+      if (!response.ok) throw new Error(`Couldn't load ${fileName}`);
       const arrayBuffer = await response.arrayBuffer();
       return decodeContext.decodeAudioData(arrayBuffer);
     }),
