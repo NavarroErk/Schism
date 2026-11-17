@@ -11,4 +11,6 @@ services:
     environment:
       - TZ=UTC
       - YTDLP_AUTO_UPDATE=true
+      - PUID=1000
+      - PGID=1000
     restart: unless-stopped
