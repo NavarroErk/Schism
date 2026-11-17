@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y ffmpeg
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+ENV TORCH_HOME=/app/models
+
 COPY backend/ .
 
 # Copy React build output into backend static folder

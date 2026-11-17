@@ -7,6 +7,7 @@ services:
     volumes:
       - ./data/jobs:/app/jobs
       - ./data/logs:/app/logs
+      - ./data/models:/app/models
     environment:
       - TZ=UTC
       - YTDLP_AUTO_UPDATE=true
