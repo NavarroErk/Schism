@@ -1,5 +1,4 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Response, UploadFile, File, Form
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
@@ -33,28 +32,15 @@ app = FastAPI(lifespan=lifespan)
 logger = logging.getLogger("uvicorn")
 os.makedirs("logs", exist_ok=True)
 handler = RotatingFileHandler("logs/app.log", maxBytes=10_000_000, backupCount=3)
-handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
-handler.formatter.converter = time.localtime
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+formatter.converter = time.localtime
+handler.setFormatter(formatter)
 for name in ["uvicorn", "uvicorn.access", "uvicorn.error"]:
     logging.getLogger(name).addHandler(handler)
-
-
-origins = [
-    "http://localhost:5173",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.get("/api/health")
 def health():
     return {"status": "ok", "dependencies": check_dependencies()}
-
 
 class URLJobRequest(BaseModel):
     url: str
