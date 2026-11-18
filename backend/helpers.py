@@ -12,6 +12,7 @@ import logging
 import queue
 import threading
 import uuid
+from typing import Any
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -89,7 +90,7 @@ def process_file_job(job_id, output_format, demucs_model):
 def run_ytdlp(job_id, url):
     try:
         update_job_status(job_id, "Downloading Audio", None)
-        options = {
+        options: Any = {  # Any: yt-dlp's own options type is private, so the checker can't match a plain dict to it
             'format': 'bestaudio/best',
             'outtmpl': f'jobs/{job_id}/%(title)s.%(ext)s',
             'noplaylist': True,
@@ -102,7 +103,9 @@ def run_ytdlp(job_id, url):
         downloaded_title = ""
         with yt_dlp.YoutubeDL(options) as ytdlp:
             extracted_info = ytdlp.extract_info(url, download=True)
-            downloaded_title = sanitize_filename(f'{extracted_info["title"]}')
+            if extracted_info is None:
+                raise RuntimeError("yt-dlp returned no info for this URL")
+            downloaded_title = sanitize_filename(extracted_info.get("title") or "Untitled")
             file_name = f"{downloaded_title}.wav"
         # 
         # rename directory to include job_id slice for uniqueness
