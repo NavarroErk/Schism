@@ -16,6 +16,7 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 ENV TORCH_HOME=/app/models
+ENV HF_HOME=/app/models/huggingface
 
 COPY backend/ .
 
