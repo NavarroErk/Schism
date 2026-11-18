@@ -107,6 +107,8 @@ def get_stem_paths_by_id(id: str):
 
 @app.get("/api/jobs/{id}/stem/{stemFileName}")
 def get_stem_file(id: str, stemFileName: str, compressed: bool = False):
+    if find_job_by_id(id) is None:
+        raise HTTPException(status_code=404, detail="Job not found")
     stem_path = os.path.join(get_job_directory(id), "output", stemFileName)
     # compressed = smaller copy for faster loading in Studio/Practice (export always uses the originals)
     if compressed:
