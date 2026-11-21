@@ -26,7 +26,7 @@ export default function Studio() {
   const nodesRef = useRef([]);
   const masterGainRef = useRef(null);
 
-  const [stemsData, setStemsData] = useState(
+  const [stemsData] = useState(
     location.state || JSON.parse(sessionStorage.getItem("songData")),
   );
   const [isPlaying, setIsPlaying] = useState(false);
@@ -70,6 +70,7 @@ export default function Studio() {
       getStemFiles();
     }
     return () => stopAudio();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function getStemFiles() {
@@ -238,7 +239,9 @@ export default function Studio() {
       nodesRef.current.forEach(({ source }) => {
         try {
           source.stop();
-        } catch (e) {}
+        } catch {
+          // stop() throws if the source never started - nothing to stop, so ignore it
+        }
       });
       seekOffsetRef.current = offset;
       hasStartedRef.current = false;

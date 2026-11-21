@@ -96,10 +96,9 @@ export default function Home() {
           showToast("Added job to queue", "success");
           navigate("/queue");
         } else {
-          const error = await response.json();
           showToast("Unable to add job", "error");
         }
-      } catch (error) {
+      } catch {
         showToast("Server could not be reached", "error");
       } finally {
         setIsSubmitting(false);
@@ -122,7 +121,7 @@ export default function Home() {
         } else {
           showToast("Job failed", "error");
         }
-      } catch (error) {
+      } catch {
         showToast("Server could not be reached", "error");
       } finally {
         setIsSubmitting(false);
@@ -136,7 +135,7 @@ export default function Home() {
         <h1 className="home-logo">
           SCH<span>ISM</span>
         </h1>
-        <p className="home-tagline">Stem separation</p>
+        <p className="home-tagline">Split | Mix | Practice</p>
       </header>
 
       <form className="home-form" onSubmit={handleSubmit} noValidate>

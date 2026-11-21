@@ -59,6 +59,7 @@ export default function Practice() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [trackProgress, setTrackProgress] = useState(0);
+  const [duration, setDuration] = useState(0); // song length in seconds, for the timestamps
   const [stemGains, setStemGains] = useState(initialGains);
   const [loopStart, setLoopStart] = useState(null); // percent/null
   const [loopEnd, setLoopEnd] = useState(null); // percent/null
@@ -66,9 +67,23 @@ export default function Practice() {
   const [masterGain, setMasterGain] = useState(practiceData?.masterGain ?? 1);
   const [seekMode, setSeekMode] = useState("circle"); // "circle" / "line"
 
+  // declared before the useEffect below, which calls stopAudio on unmount
+  function setPlaying(value) {
+    isPlayingRef.current = value;
+    setIsPlaying(value);
+  }
+
+  function stopAudio() {
+    clearInterval(trackProgressIntervalRef.current);
+    if (audioContextRef.current) audioContextRef.current.close();
+    setPlaying(false);
+  }
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     if (practiceData && window.isSecureContext) getStemFiles();
     return () => stopAudio();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function getStemFiles() {
@@ -89,6 +104,7 @@ export default function Practice() {
       await SoundTouchNode.register(audioContextRef.current, processorUrl);
       const buffers = await loadStems(practiceData.jobId, practiceData.json);
       audioBuffersRef.current = buffers;
+      setDuration(buffers[0].duration);
       setIsLoaded(true);
       createNodes();
     } catch (error) {
@@ -119,11 +135,6 @@ export default function Practice() {
       return { source, gainNode };
     });
     nodesRef.current = nodes;
-  }
-
-  function setPlaying(value) {
-    isPlayingRef.current = value;
-    setIsPlaying(value);
   }
 
   function getDuration() {
@@ -182,7 +193,9 @@ export default function Practice() {
     nodesRef.current.forEach(({ source }) => {
       try {
         source.stop();
-      } catch (e) {}
+      } catch {
+        // stop() throws if the source never started - nothing to stop, so ignore it
+      }
     });
   }
 
@@ -349,15 +362,8 @@ export default function Practice() {
     stNodeRef.current.playbackRate.value = rate;
   }
 
-  function stopAudio() {
-    clearInterval(trackProgressIntervalRef.current);
-    if (audioContextRef.current) audioContextRef.current.close();
-    setPlaying(false);
-  }
-
   function formatTime(pct) {
-    if (!audioBuffersRef.current) return formatClock(0);
-    return formatClock(pctToSeconds(pct));
+    return formatClock((pct / 100) * duration);
   }
 
   if (!window.isSecureContext) {

@@ -5,6 +5,9 @@ import { removeExtension } from "../utils/fileName.js";
 import { EditIcon, OpenIcon, RetryIcon, TrashIcon } from "./Icons.jsx";
 import { useToast } from "./toast-context.js";
 
+// eslint-disable-next-line no-control-regex -- matching the ESC control character is the point
+const ANSI_COLOR_CODES = /\x1B\[[0-9;]*m/g;
+
 function QueueItem({ job, fetchJobsData }) {
   const navigate = useNavigate();
   const showToast = useToast();
@@ -201,7 +204,7 @@ function QueueItem({ job, fetchJobsData }) {
         {job.error && (
           <Marquee
             className="queue-item-error"
-            text={job.error.replace(/\x1B\[[0-9;]*m/g, "")}
+            text={job.error.replace(ANSI_COLOR_CODES, "")}
           />
         )}
       </div>

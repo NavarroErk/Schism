@@ -5,7 +5,7 @@ import "../css/Queue.css";
 
 export default function Queue() {
   const [jobsData, setJobsData] = useState(null);
-  const [pollingInterval, setPollingInterval] = useState(5000);
+  const [pollingInterval] = useState(5000);
   const [displayPollingTimer, setDisplayPollingTimer] = useState(
     pollingInterval / 1000,
   );
@@ -54,9 +54,7 @@ export default function Queue() {
       {jobsData === null && <p className="queue-empty">Loading jobs…</p>}
       {jobsData && (
         <div className="job-queue">
-          {jobsData.length === 0 && (
-            <p className="queue-empty">No jobs yet.</p>
-          )}
+          {jobsData.length === 0 && <p className="queue-empty">No jobs yet.</p>}
           {jobsData.map((job, i) => (
             <QueueItem
               job={job}
