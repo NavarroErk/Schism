@@ -79,11 +79,13 @@ def check_dependencies():
 def process_url_job(job_id, url, output_format, demucs_model):
     run_ytdlp(job_id, url)
     run_demucs(job_id, output_format, demucs_model)
+    run_beat_detection(job_id)
     update_job_status(job_id, "Success")
 
 
 def process_file_job(job_id, output_format, demucs_model):
     run_demucs(job_id, output_format, demucs_model)
+    run_beat_detection(job_id)
     update_job_status(job_id, "Success")
 
 
@@ -153,6 +155,62 @@ def run_demucs(job_id, output_format, demucs_model):
     except Exception as e:
         update_job_status(job_id, "Demucs Failed", str(e))
         raise
+
+CLICK_STEM = "click.flac"
+
+
+def run_beat_detection(job_id):
+    # Create a click track from the beats in the original audio. If it fails the job still succeeds, just without a click track
+    try:
+        update_job_status(job_id, "Detecting Beats", None)
+        job_directory = get_job_directory(job_id)
+        audio_path = get_demucs_input_file(job_directory)
+        beats_path = os.path.join(job_directory, "beats.tsv")
+        click_path = os.path.join(job_directory, "output", CLICK_STEM)
+
+        subprocess.run(["beat_this", audio_path, "-o", beats_path, "--gpu=-1", "--model", "final0"],
+                       check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        write_click_track(beats_path, audio_path, click_path)
+    except Exception as e:
+        logger.warning(f"Beat detection failed for job {job_id}: {e}")
+
+
+def write_click_track(beats_path, audio_path, click_path):
+    # create silent track the length of the audio, with a click on every beat
+    import numpy as np
+    import soundfile as sf
+
+    # create list of timestamps
+    with open(beats_path) as file:
+        beats = [float(line.split()[0]) for line in file if line.strip()]
+
+    # count in beats on silence before audio begins
+    if len(beats) >= 5:
+        spacing = np.median(np.diff(beats[:5]))
+        while beats[0] - spacing >= 0:
+            beats.insert(0, beats[0] - spacing)
+
+    info = sf.info(audio_path)
+    sample_rate = info.samplerate
+    track = np.zeros(info.frames, dtype=np.float32)
+
+    # making the click sound
+    # evenly spaced timestamps over the course of 40ms
+    t = np.arange(int(sample_rate * 0.04)) / sample_rate
+    # amplitude at each evenly spaced point in time of 1 click sample (40ms)
+    click = np.sin(2 * np.pi * 1000 * t) * np.exp(-t * 100)
+
+    for beat in beats:
+        # start pos in track for click sample
+        start = int(beat * sample_rate)
+        if start >= len(track):
+            break
+        piece = click[:len(track) - start]  # cut off clicks that would run past the end
+        track[start:start + len(piece)] += piece # write the click into the track at this beat
+
+    # place 2 copies side-by-side for stereo, axis 1 = cols
+    sf.write(click_path, np.stack([track, track], axis=1), sample_rate)
+
 
 def get_job_directory(job_id):
     jobs_data = get_jobs_data()

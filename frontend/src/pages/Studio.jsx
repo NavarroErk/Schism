@@ -16,6 +16,11 @@ import { formatTime } from "../utils/formatTime.js";
 import { removeExtension } from "../utils/fileName.js";
 import "../css/Studio.css";
 
+// metronome track starts muted so it isn't in mixes unless you turn it up
+function defaultGain(stem) {
+  return stem.startsWith("click.") ? 0 : 1;
+}
+
 export default function Studio() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -39,7 +44,7 @@ export default function Studio() {
   const [duration, setDuration] = useState(0); // seconds, set once stems load
 
   const [stemGains, setStemGains] = useState(
-    stemsData ? Array(stemsData.json.length).fill(1) : [],
+    stemsData ? stemsData.json.map(defaultGain) : [],
   );
   const [masterGain, setMasterGain] = useState(1);
 
@@ -85,7 +90,7 @@ export default function Studio() {
       audioBuffersRef.current = buffers;
       setDuration(buffers[0]?.duration ?? 0);
 
-      setStemGains(Array(buffers.length).fill(1));
+      setStemGains(stemsData.json.map(defaultGain));
       setIsLoaded(true);
       createNodes();
     } catch (error) {

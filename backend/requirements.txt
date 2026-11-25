@@ -7,3 +7,7 @@ demucs==4.1.0
 numpy==2.5.4
 python-multipart==0.0.32
 tzdata
+beat-this==1.1.0
+rotary-embedding-torch==0.9.2
+torchaudio==2.11.1
+soundfile
